@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spend.log — Personal Expense Tracker</title>
+  <meta name="description" content="Simple personal expense tracker with analytics, weekly & monthly trends, and Google Sheets export." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- HEADER -->
+    <div class="hdr">
+      <div class="logo">spend<span>.</span>log</div>
+      <div class="hdr-right">
+        <div class="mbadge" id="month-badge">May 2026</div>
+        <button class="icon-btn" onclick="openModal()">⇅ Import / Export</button>
+      </div>
+    </div>
+
+    <!-- METRICS -->
+    <div class="metrics">
+      <div class="metric">
+        <div class="mlabel">This month</div>
+        <div class="mval" id="m-total">Rp 0</div>
+        <div class="msub neu" id="m-count">0 entries</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">This week</div>
+        <div class="mval" id="m-week">Rp 0</div>
+        <div class="msub neu" id="m-week-sub">—</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">MoM %</div>
+        <div class="mval" id="m-mom">—</div>
+        <div class="msub neu" id="m-mom-sub">vs last month</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">WoW %</div>
+        <div class="mval" id="m-wow">—</div>
+        <div class="msub neu" id="m-wow-sub">vs last week</div>
+      </div>
+    </div>
+
+    <!-- ADD FORM -->
+    <div class="add-panel">
+      <div class="add-grid">
+        <div class="field">
+          <label>Name</label>
+          <input id="inp-name" type="text" placeholder="e.g. Nasi padang" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>Amount (Rp)</label>
+          <input id="inp-amount" type="number" placeholder="25000" min="0" />
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select id="inp-cat" onchange="onCatChange()">
+            <optgroup label="Food &amp; Drinks">
+              <option value="Breakfast">Breakfast</option>
+              <option value="Lunch" selected>Lunch</option>
+              <option value="Dinner">Dinner</option>
+              <option value="Coffee">Coffee &amp; Drinks</option>
+              <option value="Snack">Snack</option>
+            </optgroup>
+            <optgroup label="Living">
+              <option value="Utilities">Utilities</option>
+              <option value="Transport">Transport</option>
+              <option value="Health">Health &amp; Medicine</option>
+              <option value="Daily necessities">Daily necessities</option>
+            </optgroup>
+            <optgroup label="Lifestyle">
+              <option value="Sports">Sports &amp; Fitness</option>
+              <option value="Shopping">Shopping</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Education">Education</option>
+            </optgroup>
+            <optgroup label="Finance">
+              <option value="Installment">Installment</option>
+              <option value="Subscription">Subscription</option>
+              <option value="Savings">Savings / Transfer</option>
+            </optgroup>
+            <option value="Others">Others (specify below)</option>
+          </select>
+        </div>
+        <div class="field btn-field">
+          <button class="add-btn" onclick="addExpense()">+ Add</button>
+        </div>
+      </div>
+      <div class="other-row" id="other-row">
+        <div class="field">
+          <label>Specify category</label>
+          <input id="inp-other-cat" type="text" placeholder="e.g. Wedding gift, Pet food..." />
+        </div>
+      </div>
+      <div class="manual-date-row">
+        <label>Manual date (optional):</label>
+        <input type="date" id="inp-date" />
+        <span class="hint-text">Leave blank to use today</span>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('ledger', this)">Ledger</button>
+      <button class="tab" onclick="switchTab('analytics', this)">Analytics</button>
+      <button class="tab" onclick="switchTab('trends', this)">Monthly Trends</button>
+      <button class="tab" onclick="switchTab('yearly', this)">Yearly</button>
+    </div>
+
+    <!-- LEDGER VIEW -->
+    <div class="view active" id="view-ledger">
+      <div class="lhdr">
+        <div class="stitle" id="ledger-title">May 2026</div>
+        <div class="chips" id="filter-chips">
+          <div class="chip active" onclick="setFilter('All', this)">All</div>
+        </div>
+      </div>
+      <table>
+        <colgroup>
+          <col style="width:72px">
+          <col>
+          <col class="col-cat" style="width:130px">
+          <col style="width:110px">
+          <col style="width:36px">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Name</th>
+            <th class="col-cat">Category</th>
+            <th style="text-align:right">Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ledger-body"></tbody>
+      </table>
+      <div class="empty" id="ledger-empty" style="display:none">
+        No entries yet — add your first expense above!
+      </div>
+    </div>
+
+    <!-- ANALYTICS VIEW -->
+    <div class="view" id="view-analytics">
+      <div class="charts-grid">
+        <div class="ccard">
+          <div class="ctitle">By category</div>
+          <div id="cat-legend" style="margin-bottom:10px"></div>
+          <div class="cwrap" style="height:200px">
+            <canvas id="cat-chart" role="img" aria-label="Spending by category donut chart"></canvas>
+          </div>
+        </div>
+        <div class="ccard">
+          <div class="ctitle">Daily spend — this month</div>
+          <div class="cwrap" style="height:220px">
+            <canvas id="daily-chart" role="img" aria-label="Daily spending bar chart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="ccard" style="margin-bottom:1rem">
+        <div class="ctitle">Category breakdown</div>
+        <div id="cat-breakdown"></div>
+      </div>
+    </div>
+
+    <!-- MONTHLY TRENDS VIEW -->
+    <div class="view" id="view-trends">
+      <div class="tgrid">
+        <div class="tcard">
+          <div class="ctitle" style="margin-bottom:.75rem">Weekly spend this month</div>
+          <div id="weekly-rows"></div>
+        </div>
+        <div class="tcard">
+          <div class="ctitle" style="margin-bottom:.75rem">WoW &amp; MoM summary</div>
+          <div id="mom-rows"></div>
+        </div>
+      </div>
+      <div class="ccard" style="margin-bottom:1rem">
+        <div class="ctitle">Top categories</div>
+        <div id="top-cats"></div>
+      </div>
+      <div class="ccard">
+        <div class="ctitle">Month-over-month (last 6 months)</div>
+        <div class="cwrap" style="height:220px">
+          <canvas id="mom-chart" role="img" aria-label="Month over month bar chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- YEARLY VIEW -->
+    <div class="view" id="view-yearly">
+      <div class="ccard" style="margin-bottom:1rem">
+        <div class="yr-header">
+          <div class="ctitle" style="margin-bottom:0">Year overview — <span id="yr-label">2026</span></div>
+          <div style="display:flex;gap:6px">
+            <button class="icon-btn" onclick="changeYear(-1)">← Prev</button>
+            <button class="icon-btn" onclick="changeYear(1)">Next →</button>
+          </div>
+        </div>
+        <div class="yr-grid" id="yr-grid"></div>
+        <div class="cwrap" style="height:220px;margin-top:1rem">
+          <canvas id="yr-chart" role="img" aria-label="Monthly spending for the year"></canvas>
+        </div>
+      </div>
+      <div class="tgrid">
+        <div class="tcard">
+          <div class="ctitle" style="margin-bottom:.75rem">Year stats — <span id="yr-stats-label">2026</span></div>
+          <div id="yr-stats"></div>
+        </div>
+        <div class="tcard">
+          <div class="ctitle" style="margin-bottom:.75rem">Year-over-year</div>
+          <div id="yoy-rows"></div>
+        </div>
+      </div>
+      <div class="ccard">
+        <div class="ctitle">Yearly category breakdown</div>
+        <div id="yr-cat-breakdown"></div>
+      </div>
+    </div>
+
+  </div><!-- end .app -->
+
+  <!-- IMPORT / EXPORT MODAL -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <div class="modal-title">Import &amp; Export</div>
+
+      <div class="modal-section">
+        <div class="modal-label">Export</div>
+        <div class="modal-desc">
+          Download as CSV — open directly in Google Sheets via <em>File → Import</em>, or Excel.
+        </div>
+        <button class="modal-btn mbtn-export" onclick="exportCSV()">⬇ Download CSV (all data)</button>
+        <button class="modal-btn mbtn-copy" onclick="copyTSV()">⎘ Copy as tab-separated (paste into Sheets)</button>
+        <div class="success-msg" id="copy-msg">Copied! Paste into Google Sheets cell A1.</div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-label">Import from CSV</div>
+        <div class="modal-desc">
+          Import a previously exported CSV. <strong>Merges</strong> with existing data (no duplicates by ID).
+        </div>
+        <button class="modal-btn mbtn-import" onclick="document.getElementById('file-input').click()">⬆ Choose CSV file</button>
+        <input class="file-input" type="file" id="file-input" accept=".csv,.tsv,.txt" onchange="importCSV(this)" />
+        <div class="success-msg" id="import-msg">Import successful!</div>
+      </div>
+
+      <div class="modal-section" style="margin-bottom:0">
+        <div class="modal-label">Google Sheets — manual sync</div>
+        <div class="modal-desc">
+          1. Export → Download CSV<br>
+          2. Open Google Sheets → <em>File → Import → Upload</em><br>
+          3. Choose "Replace spreadsheet" or "Append to current sheet"<br>
+          To import back: File → Download → CSV, then use Import above.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
