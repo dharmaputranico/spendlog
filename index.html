@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>spend.log — Personal Expense Tracker</title>
-  <meta name="description" content="Simple personal expense tracker with analytics, weekly & monthly trends, and Google Sheets export." />
+  <meta name="description" content="Simple personal expense tracker with cloud sync, analytics, and Google Sheets export." />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,12 +12,26 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app">
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen">
+    <div class="loading-box">
+      <div class="loading-logo">spend<span>.</span>log</div>
+      <div class="loading-spinner"></div>
+      <div class="loading-text" id="loading-text">Connecting to cloud…</div>
+    </div>
+  </div>
+
+  <div class="app" id="main-app" style="display:none">
 
     <!-- HEADER -->
     <div class="hdr">
       <div class="logo">spend<span>.</span>log</div>
       <div class="hdr-right">
+        <div class="sync-pill" id="sync-pill">
+          <span class="sync-dot" id="sync-dot"></span>
+          <span id="sync-label">Synced</span>
+        </div>
         <div class="mbadge" id="month-badge">May 2026</div>
         <button class="icon-btn" onclick="openModal()">⇅ Import / Export</button>
       </div>
@@ -89,13 +103,13 @@
           </select>
         </div>
         <div class="field btn-field">
-          <button class="add-btn" onclick="addExpense()">+ Add</button>
+          <button class="add-btn" id="add-btn" onclick="addExpense()">+ Add</button>
         </div>
       </div>
       <div class="other-row" id="other-row">
         <div class="field">
           <label>Specify category</label>
-          <input id="inp-other-cat" type="text" placeholder="e.g. Wedding gift, Pet food..." />
+          <input id="inp-other-cat" type="text" placeholder="e.g. Wedding gift, Pet food…" />
         </div>
       </div>
       <div class="manual-date-row">
@@ -234,17 +248,17 @@
       <div class="modal-section">
         <div class="modal-label">Export</div>
         <div class="modal-desc">
-          Download as CSV — open directly in Google Sheets via <em>File → Import</em>, or Excel.
+          Download all your data as CSV — opens directly in Google Sheets via <em>File → Import</em>.
         </div>
         <button class="modal-btn mbtn-export" onclick="exportCSV()">⬇ Download CSV (all data)</button>
-        <button class="modal-btn mbtn-copy" onclick="copyTSV()">⎘ Copy as tab-separated (paste into Sheets)</button>
+        <button class="modal-btn mbtn-copy" onclick="copyTSV()">⎘ Copy tab-separated (paste into Sheets)</button>
         <div class="success-msg" id="copy-msg">Copied! Paste into Google Sheets cell A1.</div>
       </div>
 
       <div class="modal-section">
         <div class="modal-label">Import from CSV</div>
         <div class="modal-desc">
-          Import a previously exported CSV. <strong>Merges</strong> with existing data (no duplicates by ID).
+          Import a previously exported CSV. Merges with existing data (no duplicates). Data will sync to Supabase.
         </div>
         <button class="modal-btn mbtn-import" onclick="document.getElementById('file-input').click()">⬆ Choose CSV file</button>
         <input class="file-input" type="file" id="file-input" accept=".csv,.tsv,.txt" onchange="importCSV(this)" />
@@ -252,18 +266,19 @@
       </div>
 
       <div class="modal-section" style="margin-bottom:0">
-        <div class="modal-label">Google Sheets — manual sync</div>
-        <div class="modal-desc">
-          1. Export → Download CSV<br>
-          2. Open Google Sheets → <em>File → Import → Upload</em><br>
-          3. Choose "Replace spreadsheet" or "Append to current sheet"<br>
-          To import back: File → Download → CSV, then use Import above.
+        <div class="modal-label">☁ Cloud sync</div>
+        <div class="modal-desc" id="sync-detail">
+          Your data syncs automatically to Supabase. Open this app on any device and your expenses will be up to date instantly.
         </div>
       </div>
     </div>
   </div>
 
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast"></div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>
