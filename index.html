@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>spend.log — Personal Expense Tracker</title>
-  <meta name="description" content="Simple personal expense tracker with cloud sync, analytics, and Google Sheets export." />
+  <meta name="description" content="Personal expense tracker with cloud sync and analytics." />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,6 +22,7 @@
     </div>
   </div>
 
+  <!-- MAIN APP -->
   <div class="app" id="main-app" style="display:none">
 
     <!-- HEADER -->
@@ -32,32 +33,37 @@
           <span class="sync-dot" id="sync-dot"></span>
           <span id="sync-label">Synced</span>
         </div>
-        <div class="mbadge" id="month-badge">May 2026</div>
-        <button class="icon-btn" onclick="openModal()">⇅ Import / Export</button>
+        <div class="mbadge" id="month-badge"></div>
+        <!-- Language toggle -->
+        <button class="lang-btn" id="lang-btn" onclick="toggleLang()" title="Toggle language">
+          <span id="lang-flag">🇮🇩</span>
+          <span id="lang-label">ID</span>
+        </button>
+        <button class="icon-btn" onclick="openModal()" data-i18n="importExport">⇅ Import / Export</button>
       </div>
     </div>
 
     <!-- METRICS -->
     <div class="metrics">
       <div class="metric">
-        <div class="mlabel">This month</div>
+        <div class="mlabel" data-i18n="thisMonth">This month</div>
         <div class="mval" id="m-total">Rp 0</div>
         <div class="msub neu" id="m-count">0 entries</div>
       </div>
       <div class="metric">
-        <div class="mlabel">This week</div>
+        <div class="mlabel" data-i18n="thisWeek">This week</div>
         <div class="mval" id="m-week">Rp 0</div>
         <div class="msub neu" id="m-week-sub">—</div>
       </div>
       <div class="metric">
         <div class="mlabel">MoM %</div>
         <div class="mval" id="m-mom">—</div>
-        <div class="msub neu" id="m-mom-sub">vs last month</div>
+        <div class="msub neu" id="m-mom-sub" data-i18n="vsLastMonth">vs last month</div>
       </div>
       <div class="metric">
         <div class="mlabel">WoW %</div>
         <div class="mval" id="m-wow">—</div>
-        <div class="msub neu" id="m-wow-sub">vs last week</div>
+        <div class="msub neu" id="m-wow-sub" data-i18n="vsLastWeek">vs last week</div>
       </div>
     </div>
 
@@ -65,97 +71,74 @@
     <div class="add-panel">
       <div class="add-grid">
         <div class="field">
-          <label>Name</label>
-          <input id="inp-name" type="text" placeholder="e.g. Nasi padang" autocomplete="off" />
+          <label data-i18n="name">Name</label>
+          <input id="inp-name" type="text" data-i18n-placeholder="namePlaceholder" placeholder="e.g. Nasi padang" autocomplete="off" />
         </div>
         <div class="field">
-          <label>Amount (Rp)</label>
+          <label data-i18n="amount">Amount (Rp)</label>
           <input id="inp-amount" type="number" placeholder="25000" min="0" />
         </div>
         <div class="field">
-          <label>Category</label>
+          <label data-i18n="category">Category</label>
           <select id="inp-cat" onchange="onCatChange()">
-            <optgroup label="Food &amp; Drinks">
-              <option value="Breakfast">Breakfast</option>
-              <option value="Lunch" selected>Lunch</option>
-              <option value="Dinner">Dinner</option>
-              <option value="Coffee">Coffee &amp; Drinks</option>
-              <option value="Snack">Snack</option>
-            </optgroup>
-            <optgroup label="Living">
-              <option value="Utilities">Utilities</option>
-              <option value="Transport">Transport</option>
-              <option value="Health">Health &amp; Medicine</option>
-              <option value="Daily necessities">Daily necessities</option>
-            </optgroup>
-            <optgroup label="Lifestyle">
-              <option value="Sports">Sports &amp; Fitness</option>
-              <option value="Shopping">Shopping</option>
-              <option value="Entertainment">Entertainment</option>
-              <option value="Education">Education</option>
-            </optgroup>
-            <optgroup label="Finance">
-              <option value="Installment">Installment</option>
-              <option value="Subscription">Subscription</option>
-              <option value="Savings">Savings / Transfer</option>
-            </optgroup>
-            <option value="Others">Others (specify below)</option>
+            <!-- dynamically filled by JS based on language -->
           </select>
         </div>
         <div class="field btn-field">
-          <button class="add-btn" id="add-btn" onclick="addExpense()">+ Add</button>
+          <button class="add-btn" id="add-btn" onclick="addExpense()" data-i18n="addBtn">+ Add</button>
         </div>
       </div>
       <div class="other-row" id="other-row">
         <div class="field">
-          <label>Specify category</label>
-          <input id="inp-other-cat" type="text" placeholder="e.g. Wedding gift, Pet food…" />
+          <label data-i18n="specifyCategory">Specify category</label>
+          <input id="inp-other-cat" type="text" data-i18n-placeholder="specifyPlaceholder" placeholder="e.g. Wedding gift, Pet food…" />
         </div>
       </div>
       <div class="manual-date-row">
-        <label>Manual date (optional):</label>
+        <label data-i18n="manualDate">Manual date (optional):</label>
         <input type="date" id="inp-date" />
-        <span class="hint-text">Leave blank to use today</span>
+        <span class="hint-text" data-i18n="dateHint">Leave blank to use today</span>
       </div>
     </div>
 
     <!-- TABS -->
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('ledger', this)">Ledger</button>
-      <button class="tab" onclick="switchTab('analytics', this)">Analytics</button>
-      <button class="tab" onclick="switchTab('trends', this)">Monthly Trends</button>
-      <button class="tab" onclick="switchTab('yearly', this)">Yearly</button>
+      <button class="tab active" onclick="switchTab('ledger', this)" data-i18n="tabLedger">Ledger</button>
+      <button class="tab" onclick="switchTab('analytics', this)" data-i18n="tabAnalytics">Analytics</button>
+      <button class="tab" onclick="switchTab('trends', this)" data-i18n="tabTrends">Monthly Trends</button>
+      <button class="tab" onclick="switchTab('yearly', this)" data-i18n="tabYearly">Yearly</button>
     </div>
 
     <!-- LEDGER VIEW -->
     <div class="view active" id="view-ledger">
       <div class="lhdr">
-        <div class="stitle" id="ledger-title">May 2026</div>
+        <div class="stitle" id="ledger-title"></div>
         <div class="chips" id="filter-chips">
-          <div class="chip active" onclick="setFilter('All', this)">All</div>
+          <div class="chip active" onclick="setFilter('All', this)" data-i18n="all">All</div>
         </div>
       </div>
       <table>
         <colgroup>
-          <col style="width:72px">
-          <col>
-          <col class="col-cat" style="width:130px">
-          <col style="width:110px">
-          <col style="width:36px">
+          <col style="width:72px"><col><col class="col-cat" style="width:130px">
+          <col style="width:110px"><col style="width:36px">
         </colgroup>
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Name</th>
-            <th class="col-cat">Category</th>
-            <th style="text-align:right">Amount</th>
+            <th data-i18n="date">Date</th>
+            <th data-i18n="name">Name</th>
+            <th class="col-cat" data-i18n="category">Category</th>
+            <th style="text-align:right" data-i18n="amount">Amount</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="ledger-body"></tbody>
       </table>
-      <div class="empty" id="ledger-empty" style="display:none">
-        No entries yet — add your first expense above!
+      <div class="empty" id="ledger-empty" style="display:none" data-i18n="noEntries">No entries yet — add your first expense above!</div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination" style="display:none">
+        <span class="page-info" id="page-info"></span>
+        <button class="page-btn" id="btn-see-more" onclick="seeMore()" data-i18n="seeMore">See more</button>
       </div>
     </div>
 
@@ -163,21 +146,17 @@
     <div class="view" id="view-analytics">
       <div class="charts-grid">
         <div class="ccard">
-          <div class="ctitle">By category</div>
+          <div class="ctitle" data-i18n="byCategory">By category</div>
           <div id="cat-legend" style="margin-bottom:10px"></div>
-          <div class="cwrap" style="height:200px">
-            <canvas id="cat-chart" role="img" aria-label="Spending by category donut chart"></canvas>
-          </div>
+          <div class="cwrap" style="height:200px"><canvas id="cat-chart"></canvas></div>
         </div>
         <div class="ccard">
-          <div class="ctitle">Daily spend — this month</div>
-          <div class="cwrap" style="height:220px">
-            <canvas id="daily-chart" role="img" aria-label="Daily spending bar chart"></canvas>
-          </div>
+          <div class="ctitle" data-i18n="dailySpend">Daily spend — this month</div>
+          <div class="cwrap" style="height:220px"><canvas id="daily-chart"></canvas></div>
         </div>
       </div>
       <div class="ccard" style="margin-bottom:1rem">
-        <div class="ctitle">Category breakdown</div>
+        <div class="ctitle" data-i18n="catBreakdown">Category breakdown</div>
         <div id="cat-breakdown"></div>
       </div>
     </div>
@@ -186,23 +165,21 @@
     <div class="view" id="view-trends">
       <div class="tgrid">
         <div class="tcard">
-          <div class="ctitle" style="margin-bottom:.75rem">Weekly spend this month</div>
+          <div class="ctitle" style="margin-bottom:.75rem" data-i18n="weeklySpend">Weekly spend this month</div>
           <div id="weekly-rows"></div>
         </div>
         <div class="tcard">
-          <div class="ctitle" style="margin-bottom:.75rem">WoW &amp; MoM summary</div>
+          <div class="ctitle" style="margin-bottom:.75rem" data-i18n="wowMomSummary">WoW &amp; MoM summary</div>
           <div id="mom-rows"></div>
         </div>
       </div>
       <div class="ccard" style="margin-bottom:1rem">
-        <div class="ctitle">Top categories</div>
+        <div class="ctitle" data-i18n="topCategories">Top categories</div>
         <div id="top-cats"></div>
       </div>
       <div class="ccard">
-        <div class="ctitle">Month-over-month (last 6 months)</div>
-        <div class="cwrap" style="height:220px">
-          <canvas id="mom-chart" role="img" aria-label="Month over month bar chart"></canvas>
-        </div>
+        <div class="ctitle" data-i18n="momChart">Month-over-month (last 6 months)</div>
+        <div class="cwrap" style="height:220px"><canvas id="mom-chart"></canvas></div>
       </div>
     </div>
 
@@ -210,29 +187,27 @@
     <div class="view" id="view-yearly">
       <div class="ccard" style="margin-bottom:1rem">
         <div class="yr-header">
-          <div class="ctitle" style="margin-bottom:0">Year overview — <span id="yr-label">2026</span></div>
+          <div class="ctitle" style="margin-bottom:0" data-i18n="yearOverview">Year overview — <span id="yr-label"></span></div>
           <div style="display:flex;gap:6px">
-            <button class="icon-btn" onclick="changeYear(-1)">← Prev</button>
-            <button class="icon-btn" onclick="changeYear(1)">Next →</button>
+            <button class="icon-btn" onclick="changeYear(-1)">← <span data-i18n="prev">Prev</span></button>
+            <button class="icon-btn" onclick="changeYear(1)"><span data-i18n="next">Next</span> →</button>
           </div>
         </div>
         <div class="yr-grid" id="yr-grid"></div>
-        <div class="cwrap" style="height:220px;margin-top:1rem">
-          <canvas id="yr-chart" role="img" aria-label="Monthly spending for the year"></canvas>
-        </div>
+        <div class="cwrap" style="height:220px;margin-top:1rem"><canvas id="yr-chart"></canvas></div>
       </div>
       <div class="tgrid">
         <div class="tcard">
-          <div class="ctitle" style="margin-bottom:.75rem">Year stats — <span id="yr-stats-label">2026</span></div>
+          <div class="ctitle" style="margin-bottom:.75rem" data-i18n="yearStats">Year stats — <span id="yr-stats-label"></span></div>
           <div id="yr-stats"></div>
         </div>
         <div class="tcard">
-          <div class="ctitle" style="margin-bottom:.75rem">Year-over-year</div>
+          <div class="ctitle" style="margin-bottom:.75rem" data-i18n="yearOverYear">Year-over-year</div>
           <div id="yoy-rows"></div>
         </div>
       </div>
       <div class="ccard">
-        <div class="ctitle">Yearly category breakdown</div>
+        <div class="ctitle" data-i18n="yearlyCatBreakdown">Yearly category breakdown</div>
         <div id="yr-cat-breakdown"></div>
       </div>
     </div>
@@ -243,38 +218,42 @@
   <div class="modal-overlay" id="modal">
     <div class="modal">
       <button class="modal-close" onclick="closeModal()">×</button>
-      <div class="modal-title">Import &amp; Export</div>
-
+      <div class="modal-title" data-i18n="importExportTitle">Import &amp; Export</div>
       <div class="modal-section">
-        <div class="modal-label">Export</div>
-        <div class="modal-desc">
-          Download all your data as CSV — opens directly in Google Sheets via <em>File → Import</em>.
-        </div>
-        <button class="modal-btn mbtn-export" onclick="exportCSV()">⬇ Download CSV (all data)</button>
-        <button class="modal-btn mbtn-copy" onclick="copyTSV()">⎘ Copy tab-separated (paste into Sheets)</button>
-        <div class="success-msg" id="copy-msg">Copied! Paste into Google Sheets cell A1.</div>
+        <div class="modal-label" data-i18n="export">Export</div>
+        <div class="modal-desc" data-i18n="exportDesc">Download all data as CSV — opens in Google Sheets via <em>File → Import</em>.</div>
+        <button class="modal-btn mbtn-export" onclick="exportCSV()" data-i18n="downloadCSV">⬇ Download CSV (all data)</button>
+        <button class="modal-btn mbtn-copy" onclick="copyTSV()" data-i18n="copyTSV">⎘ Copy tab-separated (paste into Sheets)</button>
+        <div class="success-msg" id="copy-msg" data-i18n="copySuccess">Copied! Paste into Google Sheets cell A1.</div>
       </div>
-
       <div class="modal-section">
-        <div class="modal-label">Import from CSV</div>
-        <div class="modal-desc">
-          Import a previously exported CSV. Merges with existing data (no duplicates). Data will sync to Supabase.
-        </div>
-        <button class="modal-btn mbtn-import" onclick="document.getElementById('file-input').click()">⬆ Choose CSV file</button>
+        <div class="modal-label" data-i18n="import">Import from CSV</div>
+        <div class="modal-desc" data-i18n="importDesc">Import a previously exported CSV. Merges with existing data (no duplicates).</div>
+        <button class="modal-btn mbtn-import" onclick="document.getElementById('file-input').click()" data-i18n="chooseFile">⬆ Choose CSV file</button>
         <input class="file-input" type="file" id="file-input" accept=".csv,.tsv,.txt" onchange="importCSV(this)" />
-        <div class="success-msg" id="import-msg">Import successful!</div>
+        <div class="success-msg" id="import-msg" data-i18n="importSuccess">Import successful!</div>
       </div>
-
       <div class="modal-section" style="margin-bottom:0">
-        <div class="modal-label">☁ Cloud sync</div>
-        <div class="modal-desc" id="sync-detail">
-          Your data syncs automatically to Supabase. Open this app on any device and your expenses will be up to date instantly.
-        </div>
+        <div class="modal-label" data-i18n="cloudSync">☁ Cloud sync</div>
+        <div class="modal-desc" data-i18n="cloudDesc">Your data syncs automatically to Supabase. Open this app on any device and your expenses will be up to date.</div>
       </div>
     </div>
   </div>
 
-  <!-- TOAST NOTIFICATION -->
+  <!-- DELETE CONFIRM MODAL -->
+  <div class="modal-overlay" id="delete-modal">
+    <div class="modal modal-sm">
+      <div class="modal-title" data-i18n="confirmDelete">Delete expense?</div>
+      <div class="delete-preview" id="delete-preview"></div>
+      <div class="modal-desc" data-i18n="deleteWarning" style="margin-bottom:1.25rem">This action cannot be undone.</div>
+      <div style="display:flex;gap:8px">
+        <button class="modal-btn mbtn-cancel" onclick="closeDeleteModal()" style="flex:1" data-i18n="cancel">Cancel</button>
+        <button class="modal-btn mbtn-delete" onclick="confirmDelete()" style="flex:1" data-i18n="yesDelete">Yes, delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
   <div class="toast" id="toast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
