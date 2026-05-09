@@ -455,7 +455,7 @@ function getWeekNum(d) {
 function fmt(n)  { return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
 function fmtS(n) {
   if (n >= 1e9) return 'Rp '+(n/1e9).toFixed(1)+'M';
-  if (n >= 1e6) return 'Rp '+(n/1e6).toFixed(1)+'jt';
+  if (n >= 1e6) return 'Rp '+(n/1e6).toFixed(1)+(lang==='id'?'jt':'mio');
   return 'Rp '+Math.round(n/1000)+'k';
 }
 function pctBadge(pct) {
