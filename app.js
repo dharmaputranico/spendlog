@@ -322,13 +322,23 @@ function expToRow(exp) {
 
 async function loadFromSupabase() {
   setSyncStatus('syncing','loading');
-  const { data, error } = await db.from('expenses').select('*').order('ts',{ascending:false});
-  if (error) {
-    console.error(error); setSyncStatus('error','offline');
+  try {
+    // 8-second timeout on the data fetch
+    const fetchPromise = db.from('expenses').select('*').order('ts',{ascending:false});
+    const timeoutPromise = new Promise((_,rej) => setTimeout(()=>rej(new Error('fetch timeout')), 8000));
+    const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+    if (error) {
+      console.error('loadFromSupabase error:', error);
+      setSyncStatus('error','offline');
+      allExpenses = loadCache(); showToast(t('toastCached'));
+    } else {
+      allExpenses = (data||[]).map(rowToExp);
+      cacheAll(); setSyncStatus('synced','synced');
+    }
+  } catch(e) {
+    console.error('loadFromSupabase threw:', e);
+    setSyncStatus('error','offline');
     allExpenses = loadCache(); showToast(t('toastCached'));
-  } else {
-    allExpenses = (data||[]).map(rowToExp);
-    cacheAll(); setSyncStatus('synced','synced');
   }
 }
 
@@ -916,29 +926,32 @@ window.addEventListener('offline',()=>{setSyncStatus('error','offline');showToas
 
 // ── AUTH STATE + INIT ──────────────────────────────────────────────────────
 
-// Shared timeout handle — auth state change can cancel it
-let _initTimeout = null;
-let _authed = false;
+// ── AUTH STATE + INIT ──────────────────────────────────────────────────────
+// Simple approach: check session once on load, then listen for changes.
+// onAuthStateChange only handles post-init events (sign in / sign out actions).
 
-db.auth.onAuthStateChange(async(event,session)=>{
-  console.log('Auth state change:', event, session?.user?.email || 'no user');
+let _appReady = false;
 
-  if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
-    if(!session?.user) return;
-    // Cancel the init timeout — user is signed in, don't redirect to auth
-    if(_initTimeout) { clearTimeout(_initTimeout); _initTimeout=null; }
-    _authed = true;
-    showLoading(t('connecting'));
-    applyUser(session.user);
-    buildCategorySelect();
-    await loadFromSupabase();
-    hideLoading();
-    showScreen('app');
-    applyLanguage();
-    refreshAllNavBars();
-  } else if(event==='SIGNED_OUT'){
-    _authed = false;
-    allExpenses=[];
+async function bootApp(user) {
+  if (_appReady) return; // prevent double-boot
+  _appReady = true;
+  applyUser(user);
+  buildCategorySelect();
+  showLoading(t('connecting'));
+  await loadFromSupabase();
+  hideLoading();
+  showScreen('app');
+  applyLanguage();
+  refreshAllNavBars();
+}
+
+db.auth.onAuthStateChange(async(event, session) => {
+  console.log('onAuthStateChange:', event, session?.user?.email || 'no user');
+  if ((event === 'SIGNED_IN') && session?.user && !_appReady) {
+    await bootApp(session.user);
+  } else if (event === 'SIGNED_OUT') {
+    _appReady = false;
+    allExpenses = [];
     showScreen('auth');
   }
 });
@@ -946,38 +959,29 @@ db.auth.onAuthStateChange(async(event,session)=>{
 (async function init(){
   showLoading(t('loading'));
 
-  // Apply auth screen language before anything renders
-  document.querySelectorAll('[data-i18n]').forEach(el=>{
-    const key=el.getAttribute('data-i18n');
-    if(el.tagName==='INPUT'||el.tagName==='TEXTAREA') el.placeholder=t(key);
-    else el.textContent=t(key);
+  // Apply i18n to auth screen elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (el.tagName==='INPUT' || el.tagName==='TEXTAREA') el.placeholder = t(key);
+    else el.textContent = t(key);
   });
   buildCategorySelect();
 
-  // Safety net: if no auth event fires within 6s, show auth screen
-  // But only if the user hasn't already been signed in by onAuthStateChange
-  _initTimeout = setTimeout(()=>{
-    if(!_authed) {
-      console.warn('Supabase session check timed out — showing auth screen');
-      hideLoading();
-      showScreen('auth');
-    }
-  }, 6000);
-
   try {
     const { data: { session }, error } = await db.auth.getSession();
-    if (error) {
-      clearTimeout(_initTimeout); _initTimeout=null;
-      console.error('Session error:', error);
-      hideLoading(); showScreen('auth');
-    } else if (!session) {
-      clearTimeout(_initTimeout); _initTimeout=null;
-      hideLoading(); showScreen('auth');
+    console.log('getSession result:', error ? 'error:'+error.message : (session ? 'session found' : 'no session'));
+
+    if (error || !session) {
+      // No session — show login screen
+      hideLoading();
+      showScreen('auth');
+    } else {
+      // Already logged in — boot straight into app
+      await bootApp(session.user);
     }
-    // If session exists, onAuthStateChange fires SIGNED_IN and handles everything
   } catch(e) {
-    clearTimeout(_initTimeout); _initTimeout=null;
-    console.error('Init error:', e);
-    hideLoading(); showScreen('auth');
+    console.error('Init failed:', e);
+    hideLoading();
+    showScreen('auth');
   }
 })();
