@@ -7,7 +7,7 @@
 // ── SUPABASE ───────────────────────────────────────────────────────────────
 
 const SUPABASE_URL = 'https://wpnsxvpjxfyevrdxqiln.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_U6c6OJhIs9yem90wJAmHYg_E-VC4LMj';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbnN4dnBqeGZ5ZXZyZHhxaWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDA2MzMsImV4cCI6MjA5MzI3NjYzM30.zNKyyLipYPlCy82RRS66yy5ApqS8t_feNEx_xDnnWu0';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -917,14 +917,38 @@ db.auth.onAuthStateChange(async(event,session)=>{
 
 (async function init(){
   showLoading(t('loading'));
-  // Apply auth screen language
+
+  // Apply auth screen language before anything renders
   document.querySelectorAll('[data-i18n]').forEach(el=>{
     const key=el.getAttribute('data-i18n');
     if(el.tagName==='INPUT'||el.tagName==='TEXTAREA') el.placeholder=t(key);
     else el.textContent=t(key);
   });
   buildCategorySelect();
-  const{data:{session}}=await db.auth.getSession();
-  if(!session){ hideLoading(); showScreen('auth'); }
-  // If session exists, onAuthStateChange fires automatically
+
+  // Safety net: if Supabase takes more than 5s, show auth screen anyway
+  const timeout = setTimeout(()=>{
+    console.warn('Supabase session check timed out — showing auth screen');
+    hideLoading();
+    showScreen('auth');
+  }, 5000);
+
+  try {
+    const { data: { session }, error } = await db.auth.getSession();
+    clearTimeout(timeout);
+    if (error) {
+      console.error('Session error:', error);
+      hideLoading();
+      showScreen('auth');
+    } else if (!session) {
+      hideLoading();
+      showScreen('auth');
+    }
+    // If session exists, onAuthStateChange fires and handles the rest
+  } catch(e) {
+    clearTimeout(timeout);
+    console.error('Init error:', e);
+    hideLoading();
+    showScreen('auth');
+  }
 })();
