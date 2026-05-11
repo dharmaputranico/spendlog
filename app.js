@@ -9,7 +9,7 @@
 const SUPABASE_URL = 'https://wpnsxvpjxfyevrdxqiln.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbnN4dnBqeGZ5ZXZyZHhxaWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDA2MzMsImV4cCI6MjA5MzI3NjYzM30.zNKyyLipYPlCy82RRS66yy5ApqS8t_feNEx_xDnnWu0';
 const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } });
 
 // ── i18n ───────────────────────────────────────────────────────────────────
 
@@ -212,24 +212,42 @@ async function handleEmailAuth() {
   btn.disabled    = true;
   btn.textContent = t(authMode==='login'?'signingIn':'creatingAccount');
 
+  console.log('Attempting auth, mode:', authMode, 'email:', email);
+
   let error;
   if (authMode==='login') {
-    const res = await db.auth.signInWithPassword({ email, password });
-    error = res.error;
+    try {
+      const res = await db.auth.signInWithPassword({ email, password });
+      console.log('signInWithPassword result:', JSON.stringify(res));
+      error = res.error;
+    } catch(e) {
+      console.error('signInWithPassword threw:', e);
+      btn.disabled=false; btn.textContent=t('signIn');
+      showAuthError('Network error — check your connection and try again.');
+      return;
+    }
   } else {
-    const res = await db.auth.signUp({ email, password });
-    error = res.error;
-    if (!error) {
-      showAuthSuccess(t('checkEmailMsg'));
+    try {
+      const res = await db.auth.signUp({ email, password });
+      console.log('signUp result:', JSON.stringify(res));
+      error = res.error;
+      if (!error) {
+        showAuthSuccess(t('checkEmailMsg'));
+        btn.disabled=false; btn.textContent=t('createAccount');
+        showAuthTab('login');
+        return;
+      }
+    } catch(e) {
+      console.error('signUp threw:', e);
       btn.disabled=false; btn.textContent=t('createAccount');
-      showAuthTab('login');
+      showAuthError('Network error — check your connection and try again.');
       return;
     }
   }
 
   btn.disabled    = false;
   btn.textContent = t(authMode==='login'?'signIn':'createAccount');
-  if (error) showAuthError(error.message);
+  if (error) { console.error('Auth error:', error); showAuthError(error.message); }
 }
 
 async function handleGoogleAuth() {
@@ -899,6 +917,7 @@ window.addEventListener('offline',()=>{setSyncStatus('error','offline');showToas
 // ── AUTH STATE + INIT ──────────────────────────────────────────────────────
 
 db.auth.onAuthStateChange(async(event,session)=>{
+  console.log('Auth state change:', event, session?.user?.email || 'no user');
   if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
     if(!session?.user) return;
     showLoading(t('connecting'));
