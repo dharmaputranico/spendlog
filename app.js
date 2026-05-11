@@ -970,22 +970,47 @@ async function bootApp(user) {
   _appReady = true;
   applyUser(user);
   buildCategorySelect();
-  showLoading(t('connecting'));
 
-  // Refresh the session token first — ensures auth header is fresh
-  // before the first data fetch (especially important on returning visits)
-  try {
-    const { data: { session } } = await db.auth.refreshSession();
-    if (session?.user) applyUser(session.user); // update with refreshed user
-  } catch(e) {
-    console.warn('Session refresh failed (non-fatal):', e.message);
-  }
-
-  await loadFromSupabase();
+  // Step 1: Load cached data immediately and show the app — no waiting
+  allExpenses = loadCache();
   hideLoading();
   showScreen('app');
   applyLanguage();
   refreshAllNavBars();
+
+  // Step 2: Fetch fresh data from Supabase in the background
+  // User sees the app instantly; data silently updates when ready
+  backgroundSync();
+}
+
+async function backgroundSync() {
+  setSyncStatus('syncing', 'loading');
+  console.log('Background sync starting...');
+
+  // Small delay to let the UI settle first
+  await new Promise(r => setTimeout(r, 300));
+
+  // Try to refresh session token (non-blocking if it fails)
+  try {
+    const { data } = await db.auth.refreshSession();
+    if (data?.user) applyUser(data.user);
+    console.log('Session refreshed OK');
+  } catch(e) {
+    console.warn('Session refresh failed:', e.message);
+  }
+
+  // Now fetch data with retries
+  await loadFromSupabase();
+
+  // Re-render everything with fresh data
+  buildFilterChips();
+  renderLedger();
+  renderMetrics();
+
+  const activeTab = document.querySelector('.tab.active')?.getAttribute('data-i18n');
+  if (activeTab === 'tabAnalytics') renderCharts();
+  if (activeTab === 'tabTrends')    renderTrends();
+  if (activeTab === 'tabYearly')    renderYearly();
 }
 
 db.auth.onAuthStateChange(async(event, session) => {
