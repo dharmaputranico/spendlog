@@ -1,51 +1,94 @@
-# spend.log 💸
+# spend.log 💸 — Multi-user edition
 
-Personal expense tracker with Supabase cloud sync, EN/ID language toggle, paginated ledger, and delete confirmation.
+Personal expense tracker with **per-user accounts**, cloud sync, EN/ID language toggle, month/week navigation, and Google Sheets export.
 
-## What's new in this version
+## What's in this version
 
-- 🌐 **English / Bahasa Indonesia** toggle — all UI text, categories, and labels switch instantly. Language preference is saved.
-- 🛒 **Groceries** and 👶 **Babies / Children** categories added (19 total)
-- 📋 **Paginated ledger** — shows 10 entries at a time with "See more" button
-- 🛡 **Delete confirmation** — a modal previews the item before deleting, preventing accidental loss
-- ☁ **Supabase sync** — all data synced across devices in real time
+- 🔐 **User accounts** — email + password or Google login
+- ☁ **Per-user cloud sync** — data separated at the database level via Row Level Security. No one can see anyone else's data.
+- 🌐 **EN / ID language toggle** — all UI, categories, months switch instantly
+- 📅 **Month navigation** — browse any past month in Ledger, Analytics, and Trends
+- 📆 **Week navigation** — drill into any week within a month in Trends
+- 📋 **Paginated ledger** — 10 entries at a time with See more
+- 🛡 **Delete confirmation** — modal preview before any delete
+- 19 categories + free-text Others
+- CSV export → Google Sheets, CSV import with merge
+- Offline fallback with localStorage cache
+- Dark mode + mobile responsive
+
+---
+
+## Setup (run once)
+
+### 1. Run the SQL migration
+
+Open **Supabase → SQL Editor**, paste and run `supabase_migration.sql`.
+
+This adds a `user_id` column and enables Row Level Security so each user only ever sees their own expenses.
+
+### 2. Configure redirect URLs in Supabase
+
+After deploying to Vercel, go to **Supabase → Authentication → URL Configuration**:
+- **Site URL** → `https://your-app.vercel.app`
+- **Redirect URLs** → add `https://your-app.vercel.app/**`
+
+### 3. (Optional) Enable Google login
+
+**Supabase → Authentication → Providers → Google → Toggle ON**
+
+Follow the Google OAuth setup guide (requires a Google Cloud project with OAuth credentials).
+
+---
 
 ## Deploy to Vercel
 
-1. Push to GitHub
-2. [vercel.com](https://vercel.com) → New Project → Import → Framework: **Other** → Deploy
+```bash
+# Push to GitHub
+git add . && git commit -m "multi-user" && git push
 
-## Supabase table
-
-```sql
-create table expenses (
-  id          text primary key,
-  name        text not null,
-  amount      numeric not null,
-  cat         text not null,
-  ts          timestamptz not null,
-  date        text, day text, date_key text,
-  created_at  timestamptz default now()
-);
-alter table expenses enable row level security;
-create policy "Allow all" on expenses for all using (true) with check (true);
+# vercel.com → New Project → Import repo → Framework: Other → Deploy
 ```
 
-## Categories (stored in English, displayed in selected language)
+---
 
-Food & Drinks: Breakfast, Lunch, Dinner, Coffee & Drinks, Snack, Groceries, Babies/Children  
-Living: Utilities, Transport, Health & Medicine, Daily necessities  
-Lifestyle: Sports & Fitness, Shopping, Entertainment, Education  
-Finance: Installment, Subscription, Savings/Transfer  
-+ Others (free text)
+## How data isolation works
+
+Each expense row has a `user_id` (UUID from `auth.users`). Supabase Row Level Security enforces:
+
+| Operation | Policy |
+|-----------|--------|
+| SELECT | only rows where `user_id = auth.uid()` |
+| INSERT | only allowed when `user_id = auth.uid()` |
+| DELETE | only rows where `user_id = auth.uid()` |
+
+This is enforced **at the database level** — even with the anon key, a user cannot read another user's data.
+
+---
+
+## Sharing with friends
+
+Just share the Vercel URL. Each person:
+1. Opens the URL
+2. Creates an account (email + password, or Google)
+3. Gets their own completely private expense tracker
+
+---
 
 ## File structure
 
 ```
 spendlog/
-├── index.html   # markup
-├── style.css    # styles + dark mode
-├── app.js       # all logic (i18n, sync, charts, pagination)
-├── favicon.svg
+├── index.html              # Auth screen + main app markup
+├── style.css               # All styles (auth, app, dark mode)
+├── app.js                  # All logic (auth, sync, charts, i18n, navigation)
+├── supabase_migration.sql  # Run once in Supabase SQL Editor
+├── favicon.svg             # App icon
 └── README.md
 ```
+
+## Tech stack
+
+- Vanilla HTML / CSS / JS — no framework, no build step
+- [Supabase JS v2](https://supabase.com/docs/reference/javascript) — auth + database + RLS
+- [Chart.js 4.4](https://www.chartjs.org/) — charts
+- [Google Fonts](https://fonts.google.com/) — Sora + DM Mono

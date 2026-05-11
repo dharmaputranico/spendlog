@@ -12,16 +12,71 @@
 </head>
 <body>
 
-  <!-- LOADING -->
+  <!-- ══════════════════════════════════════
+       LOADING
+  ══════════════════════════════════════ -->
   <div id="loading-screen">
     <div class="loading-box">
       <div class="loading-logo">spend<span>.</span>log</div>
       <div class="loading-spinner"></div>
-      <div class="loading-text" id="loading-text">Connecting…</div>
+      <div class="loading-text" id="loading-text">Loading…</div>
     </div>
   </div>
 
-  <!-- APP -->
+  <!-- ══════════════════════════════════════
+       AUTH SCREEN
+  ══════════════════════════════════════ -->
+  <div id="auth-screen" style="display:none">
+    <div class="auth-card">
+      <div class="auth-logo">spend<span>.</span>log</div>
+      <div class="auth-tagline" id="auth-tagline">Your personal expense tracker</div>
+
+      <!-- Tab switcher -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login"  onclick="showAuthTab('login')"  data-i18n="signIn">Sign in</button>
+        <button class="auth-tab"        id="tab-signup" onclick="showAuthTab('signup')" data-i18n="createAccount">Create account</button>
+      </div>
+
+      <!-- Banners -->
+      <div class="auth-banner error"   id="auth-error"   style="display:none"></div>
+      <div class="auth-banner success" id="auth-success" style="display:none"></div>
+
+      <!-- Form -->
+      <div class="auth-form">
+        <div class="field">
+          <label data-i18n="emailLabel">Email</label>
+          <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label data-i18n="passwordLabel">Password</label>
+          <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <div class="field" id="field-confirm" style="display:none">
+          <label data-i18n="confirmPasswordLabel">Confirm password</label>
+          <input type="password" id="auth-confirm" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+        <button class="auth-submit" id="auth-submit" onclick="handleEmailAuth()" data-i18n="signIn">Sign in</button>
+
+        <div class="auth-divider"><span data-i18n="orDivider">or</span></div>
+
+        <button class="auth-google" onclick="handleGoogleAuth()">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.706 17.64 9.2z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18L12.048 13.56C11.242 14.1 10.212 14.42 9 14.42c-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          <span data-i18n="continueGoogle">Continue with Google</span>
+        </button>
+      </div>
+
+      <div class="auth-footer" data-i18n="authFooter">By signing in you agree to keep your data awesome 🎉</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       MAIN APP
+  ══════════════════════════════════════ -->
   <div class="app" id="main-app" style="display:none">
 
     <!-- HEADER -->
@@ -36,7 +91,12 @@
           <span id="lang-flag">🇮🇩</span>
           <span id="lang-label">ID</span>
         </button>
+        <div class="user-pill" id="user-pill" title="">
+          <span class="user-avatar" id="user-avatar">?</span>
+          <span class="user-email-short" id="user-email-short"></span>
+        </div>
         <button class="icon-btn" onclick="openModal()" data-i18n="importExport">⇅ Import / Export</button>
+        <button class="icon-btn danger-btn" onclick="signOut()" data-i18n="signOut">Sign out</button>
       </div>
     </div>
 
@@ -60,7 +120,7 @@
       <div class="metric">
         <div class="mlabel">WoW %</div>
         <div class="mval" id="m-wow">—</div>
-        <div class="msub neu" id="m-wow-sub" data-i18n="vsLastWeek">vs last week</div>
+        <div class="msub neu" data-i18n="vsLastWeek">vs last week</div>
       </div>
     </div>
 
@@ -98,40 +158,30 @@
 
     <!-- TABS -->
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('ledger',this)" data-i18n="tabLedger">Ledger</button>
-      <button class="tab" onclick="switchTab('analytics',this)" data-i18n="tabAnalytics">Analytics</button>
-      <button class="tab" onclick="switchTab('trends',this)" data-i18n="tabTrends">Monthly Trends</button>
-      <button class="tab" onclick="switchTab('yearly',this)" data-i18n="tabYearly">Yearly</button>
+      <button class="tab active" onclick="switchTab('ledger',this)"    data-i18n="tabLedger">Ledger</button>
+      <button class="tab"        onclick="switchTab('analytics',this)" data-i18n="tabAnalytics">Analytics</button>
+      <button class="tab"        onclick="switchTab('trends',this)"    data-i18n="tabTrends">Monthly Trends</button>
+      <button class="tab"        onclick="switchTab('yearly',this)"    data-i18n="tabYearly">Yearly</button>
     </div>
 
     <!-- ═══ LEDGER ═══ -->
     <div class="view active" id="view-ledger">
-      <!-- Month navigator -->
-      <div class="nav-bar" id="ledger-nav">
+      <div class="nav-bar">
         <button class="nav-arrow" onclick="changeViewMonth(-1)">←</button>
         <div class="nav-label" id="ledger-month-label"></div>
         <button class="nav-arrow" onclick="changeViewMonth(1)" id="ledger-nav-next">→</button>
       </div>
       <div class="lhdr">
-        <div class="chips" id="filter-chips">
-          <div class="chip active" onclick="setFilter('All',this)" data-i18n="all">All</div>
-        </div>
+        <div class="chips" id="filter-chips"><div class="chip active" onclick="setFilter('All',this)" data-i18n="all">All</div></div>
         <div class="ledger-total" id="ledger-total-line"></div>
       </div>
       <table>
-        <colgroup>
-          <col style="width:72px"><col><col class="col-cat" style="width:130px">
-          <col style="width:110px"><col style="width:36px">
-        </colgroup>
-        <thead>
-          <tr>
-            <th data-i18n="date">Date</th>
-            <th data-i18n="name">Name</th>
-            <th class="col-cat" data-i18n="category">Category</th>
-            <th style="text-align:right" data-i18n="amount">Amount</th>
-            <th></th>
-          </tr>
-        </thead>
+        <colgroup><col style="width:72px"><col><col class="col-cat" style="width:130px"><col style="width:110px"><col style="width:36px"></colgroup>
+        <thead><tr>
+          <th data-i18n="date">Date</th><th data-i18n="name">Name</th>
+          <th class="col-cat" data-i18n="category">Category</th>
+          <th style="text-align:right" data-i18n="amount">Amount</th><th></th>
+        </tr></thead>
         <tbody id="ledger-body"></tbody>
       </table>
       <div class="empty" id="ledger-empty" style="display:none" data-i18n="noEntries">No entries yet.</div>
@@ -143,8 +193,7 @@
 
     <!-- ═══ ANALYTICS ═══ -->
     <div class="view" id="view-analytics">
-      <!-- Month navigator -->
-      <div class="nav-bar" id="analytics-nav">
+      <div class="nav-bar">
         <button class="nav-arrow" onclick="changeViewMonth(-1)">←</button>
         <div class="nav-label" id="analytics-month-label"></div>
         <button class="nav-arrow" onclick="changeViewMonth(1)" id="analytics-nav-next">→</button>
@@ -168,8 +217,7 @@
 
     <!-- ═══ MONTHLY TRENDS ═══ -->
     <div class="view" id="view-trends">
-      <!-- Month + Week navigators -->
-      <div class="nav-bar" id="trends-nav">
+      <div class="nav-bar">
         <button class="nav-arrow" onclick="changeViewMonth(-1)">←</button>
         <div class="nav-label" id="trends-month-label"></div>
         <button class="nav-arrow" onclick="changeViewMonth(1)" id="trends-nav-next">→</button>
@@ -203,7 +251,6 @@
     <div class="view" id="view-yearly">
       <div class="ccard" style="margin-bottom:1rem">
         <div class="yr-header">
-          <!-- NOTE: no data-i18n here — contains child span that must survive -->
           <div class="ctitle" style="margin-bottom:0" id="yr-overview-title"></div>
           <div style="display:flex;gap:6px">
             <button class="icon-btn" onclick="changeYear(-1)">← <span data-i18n="prev">Prev</span></button>
@@ -215,7 +262,6 @@
       </div>
       <div class="tgrid">
         <div class="tcard">
-          <!-- NOTE: no data-i18n here either -->
           <div class="ctitle" style="margin-bottom:.75rem" id="yr-stats-title"></div>
           <div id="yr-stats"></div>
         </div>
@@ -239,21 +285,21 @@
       <div class="modal-title" data-i18n="importExportTitle">Import &amp; Export</div>
       <div class="modal-section">
         <div class="modal-label" data-i18n="export">Export</div>
-        <div class="modal-desc" data-i18n="exportDesc">Download all data as CSV — opens in Google Sheets via File → Import.</div>
+        <div class="modal-desc" data-i18n="exportDesc">Download all data as CSV.</div>
         <button class="modal-btn mbtn-export" onclick="exportCSV()" data-i18n="downloadCSV">⬇ Download CSV</button>
-        <button class="modal-btn mbtn-copy" onclick="copyTSV()" data-i18n="copyTSV">⎘ Copy tab-separated</button>
+        <button class="modal-btn mbtn-copy"   onclick="copyTSV()"   data-i18n="copyTSV">⎘ Copy tab-separated</button>
         <div class="success-msg" id="copy-msg" data-i18n="copySuccess">Copied!</div>
       </div>
       <div class="modal-section">
         <div class="modal-label" data-i18n="import">Import from CSV</div>
         <div class="modal-desc" data-i18n="importDesc">Import a previously exported CSV. Merges with existing data.</div>
-        <button class="modal-btn mbtn-import" onclick="document.getElementById('file-input').click()" data-i18n="chooseFile">⬆ Choose CSV file</button>
+        <button class="modal-btn mbtn-import" onclick="document.getElementById('file-input').click()" data-i18n="chooseFile">⬆ Choose CSV</button>
         <input class="file-input" type="file" id="file-input" accept=".csv,.tsv,.txt" onchange="importCSV(this)" />
         <div class="success-msg" id="import-msg" data-i18n="importSuccess">Import successful!</div>
       </div>
       <div class="modal-section" style="margin-bottom:0">
         <div class="modal-label" data-i18n="cloudSync">☁ Cloud sync</div>
-        <div class="modal-desc" data-i18n="cloudDesc">Data syncs automatically to Supabase. Open on any device and it's up to date.</div>
+        <div class="modal-desc" data-i18n="cloudDesc">Your data is private and synced automatically. Only you can see your expenses.</div>
       </div>
     </div>
   </div>
@@ -266,7 +312,7 @@
       <div class="modal-desc" style="margin-bottom:1.25rem" data-i18n="deleteWarning">This action cannot be undone.</div>
       <div style="display:flex;gap:8px">
         <button class="modal-btn mbtn-cancel" onclick="closeDeleteModal()" style="flex:1" data-i18n="cancel">Cancel</button>
-        <button class="modal-btn mbtn-delete" onclick="confirmDelete()" style="flex:1" data-i18n="yesDelete">Yes, delete</button>
+        <button class="modal-btn mbtn-delete" onclick="confirmDelete()"    style="flex:1" data-i18n="yesDelete">Yes, delete</button>
       </div>
     </div>
   </div>
