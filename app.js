@@ -916,10 +916,18 @@ window.addEventListener('offline',()=>{setSyncStatus('error','offline');showToas
 
 // ── AUTH STATE + INIT ──────────────────────────────────────────────────────
 
+// Shared timeout handle — auth state change can cancel it
+let _initTimeout = null;
+let _authed = false;
+
 db.auth.onAuthStateChange(async(event,session)=>{
   console.log('Auth state change:', event, session?.user?.email || 'no user');
+
   if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
     if(!session?.user) return;
+    // Cancel the init timeout — user is signed in, don't redirect to auth
+    if(_initTimeout) { clearTimeout(_initTimeout); _initTimeout=null; }
+    _authed = true;
     showLoading(t('connecting'));
     applyUser(session.user);
     buildCategorySelect();
@@ -929,6 +937,7 @@ db.auth.onAuthStateChange(async(event,session)=>{
     applyLanguage();
     refreshAllNavBars();
   } else if(event==='SIGNED_OUT'){
+    _authed = false;
     allExpenses=[];
     showScreen('auth');
   }
@@ -945,29 +954,30 @@ db.auth.onAuthStateChange(async(event,session)=>{
   });
   buildCategorySelect();
 
-  // Safety net: if Supabase takes more than 5s, show auth screen anyway
-  const timeout = setTimeout(()=>{
-    console.warn('Supabase session check timed out — showing auth screen');
-    hideLoading();
-    showScreen('auth');
-  }, 5000);
-
-  try {
-    const { data: { session }, error } = await db.auth.getSession();
-    clearTimeout(timeout);
-    if (error) {
-      console.error('Session error:', error);
-      hideLoading();
-      showScreen('auth');
-    } else if (!session) {
+  // Safety net: if no auth event fires within 6s, show auth screen
+  // But only if the user hasn't already been signed in by onAuthStateChange
+  _initTimeout = setTimeout(()=>{
+    if(!_authed) {
+      console.warn('Supabase session check timed out — showing auth screen');
       hideLoading();
       showScreen('auth');
     }
-    // If session exists, onAuthStateChange fires and handles the rest
+  }, 6000);
+
+  try {
+    const { data: { session }, error } = await db.auth.getSession();
+    if (error) {
+      clearTimeout(_initTimeout); _initTimeout=null;
+      console.error('Session error:', error);
+      hideLoading(); showScreen('auth');
+    } else if (!session) {
+      clearTimeout(_initTimeout); _initTimeout=null;
+      hideLoading(); showScreen('auth');
+    }
+    // If session exists, onAuthStateChange fires SIGNED_IN and handles everything
   } catch(e) {
-    clearTimeout(timeout);
+    clearTimeout(_initTimeout); _initTimeout=null;
     console.error('Init error:', e);
-    hideLoading();
-    showScreen('auth');
+    hideLoading(); showScreen('auth');
   }
 })();
