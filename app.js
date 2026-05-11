@@ -320,25 +320,58 @@ function expToRow(exp) {
 
 // ── LOAD FROM SUPABASE ─────────────────────────────────────────────────────
 
+async function fetchExpenses() {
+  // Ensure we have a fresh token before fetching
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) throw new Error('No active session');
+
+  const { data, error } = await db
+    .from('expenses')
+    .select('*')
+    .order('ts', { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
 async function loadFromSupabase() {
-  setSyncStatus('syncing','loading');
-  try {
-    // 8-second timeout on the data fetch
-    const fetchPromise = db.from('expenses').select('*').order('ts',{ascending:false});
-    const timeoutPromise = new Promise((_,rej) => setTimeout(()=>rej(new Error('fetch timeout')), 8000));
-    const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-    if (error) {
-      console.error('loadFromSupabase error:', error);
-      setSyncStatus('error','offline');
-      allExpenses = loadCache(); showToast(t('toastCached'));
-    } else {
-      allExpenses = (data||[]).map(rowToExp);
-      cacheAll(); setSyncStatus('synced','synced');
+  setSyncStatus('syncing', 'loading');
+
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = [500, 1500, 3000]; // ms between retries
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        console.log(`Retrying data fetch... attempt ${attempt + 1}/${MAX_RETRIES}`);
+        await new Promise(r => setTimeout(r, RETRY_DELAY[attempt - 1]));
+      }
+
+      const data = await Promise.race([
+        fetchExpenses(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+      ]);
+
+      // Success
+      allExpenses = data.map(rowToExp);
+      cacheAll();
+      setSyncStatus('synced', 'synced');
+      console.log(`Loaded ${allExpenses.length} expenses on attempt ${attempt + 1}`);
+      return;
+
+    } catch(e) {
+      console.warn(`Fetch attempt ${attempt + 1} failed:`, e.message);
+
+      if (attempt === MAX_RETRIES - 1) {
+        // All retries exhausted — use cache
+        console.error('All fetch attempts failed, falling back to cache');
+        setSyncStatus('error', 'offline');
+        allExpenses = loadCache();
+        if (allExpenses.length > 0) {
+          showToast(t('toastCached'));
+        }
+      }
     }
-  } catch(e) {
-    console.error('loadFromSupabase threw:', e);
-    setSyncStatus('error','offline');
-    allExpenses = loadCache(); showToast(t('toastCached'));
   }
 }
 
@@ -938,6 +971,16 @@ async function bootApp(user) {
   applyUser(user);
   buildCategorySelect();
   showLoading(t('connecting'));
+
+  // Refresh the session token first — ensures auth header is fresh
+  // before the first data fetch (especially important on returning visits)
+  try {
+    const { data: { session } } = await db.auth.refreshSession();
+    if (session?.user) applyUser(session.user); // update with refreshed user
+  } catch(e) {
+    console.warn('Session refresh failed (non-fatal):', e.message);
+  }
+
   await loadFromSupabase();
   hideLoading();
   showScreen('app');
