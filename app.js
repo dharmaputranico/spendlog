@@ -971,15 +971,14 @@ async function bootApp(user) {
   applyUser(user);
   buildCategorySelect();
 
-  // Step 1: Load cached data immediately and show the app — no waiting
+  // Show app immediately from cache — user sees data right away
   allExpenses = loadCache();
   hideLoading();
   showScreen('app');
   applyLanguage();
   refreshAllNavBars();
 
-  // Step 2: Fetch fresh data from Supabase in the background
-  // User sees the app instantly; data silently updates when ready
+  // Then quietly fetch fresh data in the background
   backgroundSync();
 }
 
@@ -990,16 +989,7 @@ async function backgroundSync() {
   // Small delay to let the UI settle first
   await new Promise(r => setTimeout(r, 300));
 
-  // Try to refresh session token (non-blocking if it fails)
-  try {
-    const { data } = await db.auth.refreshSession();
-    if (data?.user) applyUser(data.user);
-    console.log('Session refreshed OK');
-  } catch(e) {
-    console.warn('Session refresh failed:', e.message);
-  }
-
-  // Now fetch data with retries
+  // Fetch fresh data (token is managed automatically by Supabase client)
   await loadFromSupabase();
 
   // Re-render everything with fresh data
@@ -1021,14 +1011,9 @@ db.auth.onAuthStateChange(async(event, session) => {
       await bootApp(session.user);
     }
   } else if (event === 'TOKEN_REFRESHED') {
-    // Token silently refreshed — update user info, re-sync if needed
-    if (session?.user) {
-      applyUser(session.user);
-      if (_appReady) {
-        console.log('Token refreshed — background sync');
-        backgroundSync();
-      }
-    }
+    // Token silently auto-refreshed by Supabase — just update user, do NOT re-sync
+    // (re-syncing here caused an infinite loop → 429 Too Many Requests → forced logout)
+    if (session?.user) applyUser(session.user);
   } else if (event === 'SIGNED_OUT') {
     _appReady = false;
     allExpenses = [];
