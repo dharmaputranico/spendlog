@@ -24,54 +24,181 @@
   </div>
 
   <!-- ══════════════════════════════════════
-       AUTH SCREEN
+       AUTH SCREEN (walkthrough + login)
   ══════════════════════════════════════ -->
   <div id="auth-screen" style="display:none">
-    <div class="auth-card">
-      <div class="auth-logo">spend<span>.</span>log</div>
-      <div class="auth-tagline" id="auth-tagline">Your personal expense tracker</div>
 
-      <!-- Tab switcher -->
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login"  onclick="showAuthTab('login')"  data-i18n="signIn">Sign in</button>
-        <button class="auth-tab"        id="tab-signup" onclick="showAuthTab('signup')" data-i18n="createAccount">Create account</button>
+    <!-- WALKTHROUGH SLIDES -->
+    <div class="wt-screen" id="wt-screen">
+      <div class="wt-slides" id="wt-slides">
+
+        <!-- Slide 1 -->
+        <div class="wt-slide">
+          <div class="wt-illustration">
+            <svg viewBox="0 0 260 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="30" y="30" width="200" height="160" rx="16" fill="#F0FAF6"/>
+              <rect x="50" y="55" width="70" height="8" rx="4" fill="#1D9E75" opacity=".25"/>
+              <rect x="50" y="70" width="110" height="6" rx="3" fill="#1D9E75" opacity=".15"/>
+              <!-- Big number -->
+              <text x="130" y="128" text-anchor="middle" font-family="'DM Mono',monospace" font-size="32" font-weight="600" fill="#1D9E75">Rp 2.4jt</text>
+              <text x="130" y="148" text-anchor="middle" font-family="'Sora',sans-serif" font-size="11" fill="#6B7280">this month</text>
+              <!-- mini bars -->
+              <rect x="60"  y="170" width="18" height="20" rx="4" fill="#9FE1CB"/>
+              <rect x="84"  y="158" width="18" height="32" rx="4" fill="#9FE1CB"/>
+              <rect x="108" y="163" width="18" height="27" rx="4" fill="#9FE1CB"/>
+              <rect x="132" y="150" width="18" height="40" rx="4" fill="#1D9E75"/>
+              <rect x="156" y="162" width="18" height="28" rx="4" fill="#9FE1CB"/>
+              <rect x="180" y="155" width="18" height="35" rx="4" fill="#9FE1CB"/>
+            </svg>
+          </div>
+          <div class="wt-title" id="wt-title-0">Track every rupiah</div>
+          <div class="wt-desc" id="wt-desc-0">Add expenses in seconds. Date and time are recorded automatically — just name, amount, category and you're done.</div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="wt-slide">
+          <div class="wt-illustration">
+            <svg viewBox="0 0 260 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="30" y="25" width="200" height="170" rx="16" fill="#F0FAF6"/>
+              <!-- donut chart -->
+              <circle cx="130" cy="105" r="55" fill="none" stroke="#E5E7EB" stroke-width="22"/>
+              <circle cx="130" cy="105" r="55" fill="none" stroke="#1D9E75"    stroke-width="22" stroke-dasharray="104 242" stroke-dashoffset="0"   stroke-linecap="round"/>
+              <circle cx="130" cy="105" r="55" fill="none" stroke="#EF9F27"    stroke-width="22" stroke-dasharray="69  242" stroke-dashoffset="-108" stroke-linecap="round"/>
+              <circle cx="130" cy="105" r="55" fill="none" stroke="#378ADD"    stroke-width="22" stroke-dasharray="42  242" stroke-dashoffset="-181" stroke-linecap="round"/>
+              <circle cx="130" cy="105" r="55" fill="none" stroke="#D85A30"    stroke-width="22" stroke-dasharray="27  242" stroke-dashoffset="-227" stroke-linecap="round"/>
+              <circle cx="130" cy="105" r="32" fill="white"/>
+              <text x="130" y="100" text-anchor="middle" font-family="'Sora',sans-serif" font-size="10" fill="#6B7280">top</text>
+              <text x="130" y="114" text-anchor="middle" font-family="'Sora',sans-serif" font-size="11" font-weight="600" fill="#1A1A1A">Lunch</text>
+              <!-- legend -->
+              <rect x="50"  y="175" width="8" height="8" rx="2" fill="#1D9E75"/>
+              <text x="62"  y="183" font-family="'Sora',sans-serif" font-size="9" fill="#6B7280">Lunch</text>
+              <rect x="105" y="175" width="8" height="8" rx="2" fill="#EF9F27"/>
+              <text x="117" y="183" font-family="'Sora',sans-serif" font-size="9" fill="#6B7280">Breakfast</text>
+              <rect x="168" y="175" width="8" height="8" rx="2" fill="#378ADD"/>
+              <text x="180" y="183" font-family="'Sora',sans-serif" font-size="9" fill="#6B7280">Utilities</text>
+            </svg>
+          </div>
+          <div class="wt-title" id="wt-title-1">See where it all goes</div>
+          <div class="wt-desc" id="wt-desc-1">Beautiful charts break down your spending by category. Spot patterns, cut waste, feel in control.</div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="wt-slide">
+          <div class="wt-illustration">
+            <svg viewBox="0 0 260 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="30" y="25" width="200" height="170" rx="16" fill="#F0FAF6"/>
+              <!-- WoW badge -->
+              <rect x="60" y="45" width="64" height="28" rx="8" fill="#FAECE7"/>
+              <text x="92" y="64" text-anchor="middle" font-family="'DM Mono',monospace" font-size="13" font-weight="600" fill="#D85A30">+12.4%</text>
+              <!-- MoM badge -->
+              <rect x="136" y="45" width="64" height="28" rx="8" fill="#E1F5EE"/>
+              <text x="168" y="64" text-anchor="middle" font-family="'DM Mono',monospace" font-size="13" font-weight="600" fill="#085041">-8.1%</text>
+              <text x="92"  y="88" text-anchor="middle" font-family="'Sora',sans-serif" font-size="9" fill="#9CA3AF">WoW</text>
+              <text x="168" y="88" text-anchor="middle" font-family="'Sora',sans-serif" font-size="9" fill="#9CA3AF">MoM</text>
+              <!-- 6 month bars -->
+              <rect x="52"  y="155" width="22" height="30" rx="4" fill="#9FE1CB"/>
+              <rect x="80"  y="140" width="22" height="45" rx="4" fill="#9FE1CB"/>
+              <rect x="108" y="148" width="22" height="37" rx="4" fill="#9FE1CB"/>
+              <rect x="136" y="132" width="22" height="53" rx="4" fill="#9FE1CB"/>
+              <rect x="164" y="143" width="22" height="42" rx="4" fill="#9FE1CB"/>
+              <rect x="192" y="125" width="22" height="60" rx="4" fill="#1D9E75"/>
+              <!-- nav arrows -->
+              <text x="48"  y="110" font-family="'Sora',sans-serif" font-size="14" fill="#1D9E75">←</text>
+              <text x="200" y="110" font-family="'Sora',sans-serif" font-size="14" fill="#1D9E75">→</text>
+              <rect x="60" y="102" width="140" height="1" fill="#E5E7EB"/>
+            </svg>
+          </div>
+          <div class="wt-title" id="wt-title-2">Trends that make sense</div>
+          <div class="wt-desc" id="wt-desc-2">Navigate month by month. Compare WoW and MoM changes. Know if you're spending more or less than last month.</div>
+        </div>
+
+        <!-- Slide 4 -->
+        <div class="wt-slide">
+          <div class="wt-illustration">
+            <svg viewBox="0 0 260 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="30" y="25" width="200" height="170" rx="16" fill="#F0FAF6"/>
+              <!-- phone + laptop icon -->
+              <!-- laptop body -->
+              <rect x="65" y="65" width="130" height="85" rx="8" fill="white" stroke="#E5E7EB" stroke-width="2"/>
+              <rect x="72" y="72" width="116" height="71" rx="4" fill="#F6F7F8"/>
+              <!-- screen content -->
+              <rect x="80" y="80" width="50" height="6" rx="3" fill="#1D9E75" opacity=".4"/>
+              <rect x="80" y="92" width="80" height="4" rx="2" fill="#E5E7EB"/>
+              <rect x="80" y="102" width="65" height="4" rx="2" fill="#E5E7EB"/>
+              <rect x="80" y="112" width="70" height="4" rx="2" fill="#E5E7EB"/>
+              <rect x="80" y="122" width="55" height="4" rx="2" fill="#E5E7EB"/>
+              <!-- laptop base -->
+              <rect x="55" y="150" width="150" height="8" rx="4" fill="#E5E7EB"/>
+              <!-- phone -->
+              <rect x="162" y="100" width="44" height="76" rx="8" fill="white" stroke="#1D9E75" stroke-width="2"/>
+              <rect x="167" y="108" width="34" height="58" rx="3" fill="#F0FAF6"/>
+              <rect x="171" y="114" width="20" height="4" rx="2" fill="#1D9E75" opacity=".5"/>
+              <rect x="171" y="122" width="26" height="3" rx="1" fill="#E5E7EB"/>
+              <rect x="171" y="129" width="22" height="3" rx="1" fill="#E5E7EB"/>
+              <rect x="171" y="136" width="24" height="3" rx="1" fill="#E5E7EB"/>
+              <!-- sync arrow -->
+              <path d="M148 128 C152 120 158 120 162 128" stroke="#1D9E75" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <polygon points="145,128 150,123 150,133" fill="#1D9E75"/>
+            </svg>
+          </div>
+          <div class="wt-title" id="wt-title-3">Synced across all devices</div>
+          <div class="wt-desc" id="wt-desc-3">Your data lives in the cloud. Add an expense on your phone, see it instantly on your laptop. Always in sync.</div>
+        </div>
+
+      </div><!-- end wt-slides -->
+
+      <!-- Dots -->
+      <div class="wt-dots" id="wt-dots">
+        <span class="wt-dot active" onclick="goToSlide(0)"></span>
+        <span class="wt-dot" onclick="goToSlide(1)"></span>
+        <span class="wt-dot" onclick="goToSlide(2)"></span>
+        <span class="wt-dot" onclick="goToSlide(3)"></span>
       </div>
 
-      <!-- Banners -->
-      <div class="auth-banner error"   id="auth-error"   style="display:none"></div>
-      <div class="auth-banner success" id="auth-success" style="display:none"></div>
+      <!-- Login box (always visible below slides) -->
+      <div class="wt-login-box">
+        <div class="auth-logo">spend<span>.</span>log</div>
 
-      <!-- Form -->
-      <div class="auth-form">
-        <div class="field">
-          <label data-i18n="emailLabel">Email</label>
-          <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" />
+        <!-- Tab switcher -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login"  onclick="showAuthTab('login')"  data-i18n="signIn">Sign in</button>
+          <button class="auth-tab"        id="tab-signup" onclick="showAuthTab('signup')" data-i18n="createAccount">Create account</button>
         </div>
-        <div class="field">
-          <label data-i18n="passwordLabel">Password</label>
-          <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" />
+
+        <!-- Banners -->
+        <div class="auth-banner error"   id="auth-error"   style="display:none"></div>
+        <div class="auth-banner success" id="auth-success" style="display:none"></div>
+
+        <!-- Form -->
+        <div class="auth-form">
+          <div class="field">
+            <label data-i18n="emailLabel">Email</label>
+            <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" />
+          </div>
+          <div class="field">
+            <label data-i18n="passwordLabel">Password</label>
+            <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+          <div class="field" id="field-confirm" style="display:none">
+            <label data-i18n="confirmPasswordLabel">Confirm password</label>
+            <input type="password" id="auth-confirm" placeholder="••••••••" autocomplete="new-password" />
+          </div>
+          <button class="auth-submit" id="auth-submit" onclick="handleEmailAuth()" data-i18n="signIn">Sign in</button>
+          <div class="auth-divider"><span data-i18n="orDivider">or</span></div>
+          <button class="auth-google" onclick="handleGoogleAuth()">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.706 17.64 9.2z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18L12.048 13.56C11.242 14.1 10.212 14.42 9 14.42c-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+              <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            <span data-i18n="continueGoogle">Continue with Google</span>
+          </button>
         </div>
-        <div class="field" id="field-confirm" style="display:none">
-          <label data-i18n="confirmPasswordLabel">Confirm password</label>
-          <input type="password" id="auth-confirm" placeholder="••••••••" autocomplete="new-password" />
-        </div>
-        <button class="auth-submit" id="auth-submit" onclick="handleEmailAuth()" data-i18n="signIn">Sign in</button>
+        <div class="auth-footer" data-i18n="authFooter">By signing in you agree to keep your data awesome 🎉</div>
+      </div><!-- end wt-login-box -->
 
-        <div class="auth-divider"><span data-i18n="orDivider">or</span></div>
-
-        <button class="auth-google" onclick="handleGoogleAuth()">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.706 17.64 9.2z" fill="#4285F4"/>
-            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18L12.048 13.56C11.242 14.1 10.212 14.42 9 14.42c-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-          </svg>
-          <span data-i18n="continueGoogle">Continue with Google</span>
-        </button>
-      </div>
-
-      <div class="auth-footer" data-i18n="authFooter">By signing in you agree to keep your data awesome 🎉</div>
-    </div>
+    </div><!-- end wt-screen -->
   </div>
 
   <!-- ══════════════════════════════════════

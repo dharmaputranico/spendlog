@@ -60,6 +60,10 @@ const I18N = {
     catOthers:'Others (specify below)', catOthersShort:'Others',
     week:'Week', today:'today', thisWeekLabel:'This week',
     signIn:'Sign in', createAccount:'Create account', signOut:'Sign out',
+    wt0title:'Track every rupiah', wt0desc:'Add expenses in seconds. Date and time are recorded automatically — just name, amount, category and you're done.',
+    wt1title:'See where it all goes', wt1desc:'Beautiful charts break down your spending by category. Spot patterns, cut waste, feel in control.',
+    wt2title:'Trends that make sense', wt2desc:'Navigate month by month. Compare WoW and MoM changes. Know if you're spending more or less than last month.',
+    wt3title:'Synced across all devices', wt3desc:'Your data lives in the cloud. Add an expense on your phone, see it instantly on your laptop. Always in sync.',
     emailLabel:'Email', passwordLabel:'Password', confirmPasswordLabel:'Confirm password',
     orDivider:'or', continueGoogle:'Continue with Google',
     authFooter:'By signing in you agree to keep your data awesome 🎉',
@@ -116,6 +120,10 @@ const I18N = {
     catOthers:'Lainnya (isi di bawah)', catOthersShort:'Lainnya',
     week:'Minggu', today:'hari ini', thisWeekLabel:'Minggu ini',
     signIn:'Masuk', createAccount:'Buat akun', signOut:'Keluar',
+    wt0title:'Catat setiap pengeluaran', wt0desc:'Tambah pengeluaran dalam hitungan detik. Tanggal dan waktu otomatis tercatat — cukup nama, jumlah, dan kategori.',
+    wt1title:'Lihat kemana uangmu pergi', wt1desc:'Grafik cantik memecah pengeluaranmu per kategori. Temukan pola, hemat lebih banyak, dan merasa lebih terkontrol.',
+    wt2title:'Tren yang mudah dipahami', wt2desc:'Navigasi bulan per bulan. Bandingkan perubahan WoW dan MoM. Tahu apakah pengeluaranmu naik atau turun.',
+    wt3title:'Tersinkron di semua perangkat', wt3desc:'Data kamu tersimpan di cloud. Tambah pengeluaran di HP, langsung terlihat di laptop. Selalu sinkron.',
     emailLabel:'Email', passwordLabel:'Kata sandi', confirmPasswordLabel:'Konfirmasi kata sandi',
     orDivider:'atau', continueGoogle:'Lanjutkan dengan Google',
     authFooter:'Dengan masuk, kamu setuju untuk menjaga datamu tetap keren 🎉',
@@ -179,6 +187,60 @@ function catENtoColor(n)  { const i=CAT_KEYS.findIndex(k=>I18N.en[k]===n); retur
 function catENtoCSS(n)    { const i=CAT_KEYS.findIndex(k=>I18N.en[k]===n); return i>=0?CAT_CSS[i]:'cc-others'; }
 function monthsLong()     { return lang==='id'?MONTHS_ID:MONTHS_EN; }
 function monthsShort()    { return lang==='id'?MONTHS_S_ID:MONTHS_S_EN; }
+
+// ── WALKTHROUGH SLIDES ────────────────────────────────────────────────────
+
+let _currentSlide = 0;
+const SLIDE_COUNT  = 4;
+
+function goToSlide(n) {
+  _currentSlide = Math.max(0, Math.min(n, SLIDE_COUNT - 1));
+
+  // Update slide visibility
+  document.querySelectorAll('.wt-slide').forEach((el, i) => {
+    el.classList.toggle('active', i === _currentSlide);
+  });
+
+  // Update dots
+  document.querySelectorAll('.wt-dot').forEach((el, i) => {
+    el.classList.toggle('active', i === _currentSlide);
+  });
+}
+
+function applyWalkthroughLang() {
+  for (let i = 0; i < SLIDE_COUNT; i++) {
+    const titleEl = document.getElementById(`wt-title-${i}`);
+    const descEl  = document.getElementById(`wt-desc-${i}`);
+    if (titleEl) titleEl.textContent = t(`wt${i}title`);
+    if (descEl)  descEl.textContent  = t(`wt${i}desc`);
+  }
+}
+
+// Swipe support for mobile
+(function initSwipe() {
+  let startX = 0;
+  document.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const diff = startX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) goToSlide(_currentSlide + (diff > 0 ? 1 : -1));
+  }, { passive: true });
+})();
+
+// Auto-advance slides every 4 seconds (pauses when user interacts)
+let _slideTimer = null;
+function startSlideTimer() {
+  stopSlideTimer();
+  _slideTimer = setInterval(() => {
+    goToSlide((_currentSlide + 1) % SLIDE_COUNT);
+  }, 4000);
+}
+function stopSlideTimer() {
+  if (_slideTimer) { clearInterval(_slideTimer); _slideTimer = null; }
+}
+
+document.querySelectorAll('.wt-dot').forEach(dot => {
+  dot.addEventListener('click', stopSlideTimer);
+});
 
 // ── AUTH SCREEN ────────────────────────────────────────────────────────────
 
@@ -270,6 +332,12 @@ async function signOut() {
 function showScreen(name) {
   document.getElementById('auth-screen').style.display = name==='auth' ? '' : 'none';
   document.getElementById('main-app').style.display    = name==='app'  ? '' : 'none';
+  if (name === 'auth') {
+    goToSlide(0);
+    startSlideTimer();
+  } else {
+    stopSlideTimer();
+  }
 }
 
 function showLoading(msg) {
@@ -840,6 +908,7 @@ function applyLanguage() {
   document.getElementById('lang-flag').textContent=isEN?'🇮🇩':'🇬🇧';
   document.getElementById('lang-label').textContent=isEN?'ID':'EN';
   buildCategorySelect();
+  applyWalkthroughLang();
   refreshAllNavBars();
   buildFilterChips();
   renderLedger();
@@ -1031,6 +1100,8 @@ db.auth.onAuthStateChange(async(event, session) => {
     else el.textContent = t(key);
   });
   buildCategorySelect();
+  applyWalkthroughLang();
+  goToSlide(0);
 
   // Give onAuthStateChange a chance to fire INITIAL_SESSION first (Supabase v2)
   // If it fires within 2s, bootApp handles everything.
