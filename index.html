@@ -332,7 +332,14 @@
           <div class="cwrap" style="height:200px"><canvas id="cat-chart"></canvas></div>
         </div>
         <div class="ccard">
-          <div class="ctitle" id="daily-chart-title">Daily spend</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+            <div class="ctitle" id="daily-chart-title" style="margin-bottom:0">Daily spend</div>
+            <div id="daily-nav" style="display:none;align-items:center;gap:6px">
+              <button class="daily-nav-btn" id="daily-prev" onclick="changeDailyPage(-1)">←</button>
+              <span class="daily-nav-info" id="daily-nav-info"></span>
+              <button class="daily-nav-btn" id="daily-next" onclick="changeDailyPage(1)">→</button>
+            </div>
+          </div>
           <div class="cwrap" style="height:220px"><canvas id="daily-chart"></canvas></div>
         </div>
       </div>

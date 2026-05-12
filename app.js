@@ -6,7 +6,7 @@
 
 // ── SUPABASE ───────────────────────────────────────────────────────────────
 
-const SUPABASE_URL = 'https://wpnsxvpjxfyevrdxqiln.supabase.co';
+const SUPABASE_URL = 'https://auth.spendlog.id';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbnN4dnBqeGZ5ZXZyZHhxaWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDA2MzMsImV4cCI6MjA5MzI3NjYzM30.zNKyyLipYPlCy82RRS66yy5ApqS8t_feNEx_xDnnWu0';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, storageKey: 'spendlog_auth', storage: window.localStorage } });
@@ -177,6 +177,8 @@ let viewMonth_m = today.getMonth();
 let viewWeekOffset = 0;
 
 let catChartInst = null, dailyChartInst = null, momChartInst = null, yrChartInst = null;
+let dailyPage = 0; // which window of 10 days to show in daily chart
+const DAILY_PAGE_SIZE = 10;
 
 // ── TRANSLATION HELPERS ────────────────────────────────────────────────────
 
@@ -451,7 +453,7 @@ function changeViewMonth(delta) {
   viewMonth_m += delta;
   if (viewMonth_m<0)  { viewMonth_m=11; viewYear_m--; }
   if (viewMonth_m>11) { viewMonth_m=0;  viewYear_m++; }
-  ledgerPage=1; activeFilter='All'; viewWeekOffset=0;
+  ledgerPage=1; activeFilter='All'; viewWeekOffset=0; dailyPage=0;
   refreshAllNavBars();
   const tab = document.querySelector('.tab.active')?.getAttribute('data-i18n');
   if (tab==='tabLedger')    { buildFilterChips(); renderLedger(); }
@@ -714,6 +716,59 @@ function seeMore(){ledgerPage++;renderLedger();}
 
 // ── ANALYTICS ──────────────────────────────────────────────────────────────
 
+function renderDailyChart(days, dMap) {
+  const total = days.length;
+  const maxPage = Math.max(0, Math.ceil(total / DAILY_PAGE_SIZE) - 1);
+  dailyPage = Math.max(0, Math.min(dailyPage, maxPage));
+
+  const start  = dailyPage * DAILY_PAGE_SIZE;
+  const slice  = days.slice(start, start + DAILY_PAGE_SIZE);
+  const labels = slice.map(k => parseInt(k.split('-')[2])); // numeric day labels
+  const values = slice.map(k => dMap[k]);
+
+  // Update nav bar
+  const navEl   = document.getElementById('daily-nav');
+  const prevBtn = document.getElementById('daily-prev');
+  const nextBtn = document.getElementById('daily-next');
+  const infoEl  = document.getElementById('daily-nav-info');
+
+  if (total <= DAILY_PAGE_SIZE) {
+    if (navEl) navEl.style.display = 'none';
+  } else {
+    if (navEl) navEl.style.display = 'flex';
+    if (prevBtn) prevBtn.disabled = dailyPage === 0;
+    if (nextBtn) nextBtn.disabled = dailyPage >= maxPage;
+    if (infoEl) {
+      const from = start + 1;
+      const to   = Math.min(start + DAILY_PAGE_SIZE, total);
+      infoEl.textContent = `${from}–${to} / ${total}`;
+    }
+  }
+
+  if (dailyChartInst) dailyChartInst.destroy();
+  dailyChartInst = new Chart(document.getElementById('daily-chart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: '#1D9E75', borderRadius: 3, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)}` } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#888' } },
+        y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 10 }, color: '#888', callback: v => 'Rp' + Math.round(v/1000) + 'k' } }
+      }
+    }
+  });
+}
+
+function changeDailyPage(delta) {
+  dailyPage += delta;
+  // Re-run renderCharts to rebuild the dMap and re-render
+  renderCharts();
+}
+
 function renderCharts() {
   document.getElementById('daily-chart-title').textContent=`${t('dailySpend')} — ${monthsLong()[viewMonth_m]} ${viewYear_m}`;
   const monthly=viewMonthExp();
@@ -734,16 +789,15 @@ function renderCharts() {
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.raw)} (${((ctx.raw/total)*100).toFixed(1)}%)`}}},cutout:'60%'}
   });
 
+  // Build daily map and sort chronologically by actual date number
   const dMap={};monthly.forEach(e=>{dMap[e.dateKey]=(dMap[e.dateKey]||0)+e.amount;});
-  const days=Object.keys(dMap).sort();
-  if(dailyChartInst)dailyChartInst.destroy();
-  dailyChartInst=new Chart(document.getElementById('daily-chart').getContext('2d'),{
-    type:'bar',
-    data:{labels:days.map(k=>k.split('-')[2]),datasets:[{data:days.map(k=>dMap[k]),backgroundColor:'#1D9E75',borderRadius:3,borderSkipped:false}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.raw)}`}}},
-      scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#888',autoSkip:true,maxTicksLimit:15}},
-              y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:10},color:'#888',callback:v=>'Rp'+Math.round(v/1000)+'k'}}}}
+  const days=Object.keys(dMap).sort((a,b)=>{
+    // dateKey format: "YYYY-M-D" — sort by actual day number
+    const dayA=parseInt(a.split('-')[2]);
+    const dayB=parseInt(b.split('-')[2]);
+    return dayA-dayB;
   });
+  renderDailyChart(days, dMap);
 
   const bd=document.getElementById('cat-breakdown');
   if(!total){bd.innerHTML=`<div class="empty">${t('noData')}</div>`;return;}

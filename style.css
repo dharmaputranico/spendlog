@@ -593,3 +593,14 @@ tbody td { padding: 9px 8px; font-size: 12px; vertical-align: middle; }
   .wt-title  { font-size: 20px; }
   .wt-desc   { font-size: 13px; }
 }
+
+/* ── DAILY CHART NAV ──────────────────────── */
+.daily-nav-btn {
+  background: var(--surf); border: .5px solid var(--bdr2);
+  border-radius: var(--r); padding: 2px 9px;
+  font-size: 13px; color: var(--muted); cursor: pointer;
+  transition: all .15s; line-height: 1.4;
+}
+.daily-nav-btn:hover    { background: var(--accent-l); color: var(--accent-d); border-color: var(--accent); }
+.daily-nav-btn:disabled { opacity: .3; cursor: not-allowed; }
+.daily-nav-info { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
