@@ -9,7 +9,7 @@
 const SUPABASE_URL = 'https://wpnsxvpjxfyevrdxqiln.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbnN4dnBqeGZ5ZXZyZHhxaWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDA2MzMsImV4cCI6MjA5MzI3NjYzM30.zNKyyLipYPlCy82RRS66yy5ApqS8t_feNEx_xDnnWu0';
 const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } });
+const db = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, storageKey: 'spendlog_auth', storage: window.localStorage } });
 
 // ── i18n ───────────────────────────────────────────────────────────────────
 
@@ -1015,8 +1015,20 @@ async function backgroundSync() {
 
 db.auth.onAuthStateChange(async(event, session) => {
   console.log('onAuthStateChange:', event, session?.user?.email || 'no user');
-  if ((event === 'SIGNED_IN') && session?.user && !_appReady) {
-    await bootApp(session.user);
+
+  if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+    if (session?.user && !_appReady) {
+      await bootApp(session.user);
+    }
+  } else if (event === 'TOKEN_REFRESHED') {
+    // Token silently refreshed — update user info, re-sync if needed
+    if (session?.user) {
+      applyUser(session.user);
+      if (_appReady) {
+        console.log('Token refreshed — background sync');
+        backgroundSync();
+      }
+    }
   } else if (event === 'SIGNED_OUT') {
     _appReady = false;
     allExpenses = [];
@@ -1035,16 +1047,34 @@ db.auth.onAuthStateChange(async(event, session) => {
   });
   buildCategorySelect();
 
+  // Give onAuthStateChange a chance to fire INITIAL_SESSION first (Supabase v2)
+  // If it fires within 2s, bootApp handles everything.
+  // If not, we fall back to getSession() manually.
+  const sessionHandled = await new Promise(resolve => {
+    const timer = setTimeout(() => resolve(false), 2000);
+    const unsub = db.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        clearTimeout(timer);
+        unsub.data?.subscription?.unsubscribe();
+        resolve(!!session);
+      }
+    });
+  });
+
+  if (sessionHandled) {
+    // onAuthStateChange already called bootApp via INITIAL_SESSION
+    console.log('Session handled by INITIAL_SESSION event');
+    return;
+  }
+
+  // Fallback: check session manually
   try {
     const { data: { session }, error } = await db.auth.getSession();
-    console.log('getSession result:', error ? 'error:'+error.message : (session ? 'session found' : 'no session'));
-
+    console.log('getSession fallback:', error ? 'error:'+error.message : (session ? 'found' : 'none'));
     if (error || !session) {
-      // No session — show login screen
       hideLoading();
       showScreen('auth');
     } else {
-      // Already logged in — boot straight into app
       await bootApp(session.user);
     }
   } catch(e) {
