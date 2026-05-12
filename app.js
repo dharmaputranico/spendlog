@@ -6,10 +6,22 @@
 
 // ── SUPABASE ───────────────────────────────────────────────────────────────
 
-const SUPABASE_URL = 'https://auth.spendlog.id';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbnN4dnBqeGZ5ZXZyZHhxaWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDA2MzMsImV4cCI6MjA5MzI3NjYzM30.zNKyyLipYPlCy82RRS66yy5ApqS8t_feNEx_xDnnWu0';
+// Database queries must use the original Supabase URL (custom domain only supports auth)
+const SUPABASE_URL  = 'https://wpnsxvpjxfyevrdxqiln.supabase.co';
+// Custom domain is used only for the auth flow (so Google OAuth shows "auth.spendlog.id")
+const SUPABASE_AUTH_URL = 'https://auth.spendlog.id';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbnN4dnBqeGZ5ZXZyZHhxaWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDA2MzMsImV4cCI6MjA5MzI3NjYzM30.zNKyyLipYPlCy82RRS66yy5ApqS8t_feNEx_xDnnWu0';
 const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, storageKey: 'spendlog_auth', storage: window.localStorage } });
+const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: 'spendlog_auth',
+    storage: window.localStorage,
+    url: SUPABASE_AUTH_URL  // auth requests go through custom domain → shows "auth.spendlog.id" in Google OAuth
+  }
+});
 
 // ── i18n ───────────────────────────────────────────────────────────────────
 
