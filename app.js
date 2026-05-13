@@ -59,7 +59,7 @@ const I18N = {
   en: {
     importExport:'⇅ Import / Export', thisMonth:'This month', thisWeek:'This week',
     vsLastMonth:'vs last month', vsLastWeek:'vs last week',
-    name:'Name', namePlaceholder:'e.g. Nasi padang', amount:'Amount (Rp)',
+    name:'Name', namePlaceholder:'e.g. Nasi padang', amount:'Amount',
     category:'Category', addBtn:'+ Add', specifyCategory:'Specify category',
     specifyPlaceholder:'e.g. Wedding gift, Pet food…',
     manualDate:'Manual date (optional):', dateHint:'Leave blank to use today',
@@ -119,7 +119,7 @@ const I18N = {
   id: {
     importExport:'⇅ Impor / Ekspor', thisMonth:'Bulan ini', thisWeek:'Minggu ini',
     vsLastMonth:'vs bulan lalu', vsLastWeek:'vs minggu lalu',
-    name:'Nama', namePlaceholder:'cth. Nasi padang', amount:'Jumlah (Rp)',
+    name:'Nama', namePlaceholder:'cth. Nasi padang', amount:'Jumlah',
     category:'Kategori', addBtn:'+ Tambah', specifyCategory:'Tulis kategori',
     specifyPlaceholder:'cth. Kado nikahan, Makanan kucing…',
     manualDate:'Tanggal manual (opsional):', dateHint:'Biarkan kosong untuk hari ini',
@@ -414,7 +414,7 @@ function applyUser(user) {
   if (avatarEl) avatarEl.textContent = email.charAt(0).toUpperCase();
   if (emailEl)  emailEl.textContent  = email.split('@')[0];
   if (pillEl)   pillEl.title         = email;
-  if (badgeEl && userCurrency) badgeEl.textContent = getCur().symbol + ' ' + userCurrency;
+  // currency badge removed — currency is permanent, no need to show it
 }
 
 // ── CACHE (per user) ───────────────────────────────────────────────────────
@@ -476,6 +476,7 @@ async function confirmCurrency() {
   await saveProfile(selectedCurCode);
   showScreen('app');
   applyLanguage();
+  updateAmountField();
   refreshAllNavBars();
 }
 
@@ -1109,10 +1110,29 @@ function applyLanguage() {
   buildFilterChips();
   renderLedger();
   renderMetrics();
+  updateAmountField();
   const tab=document.querySelector('.tab.active')?.getAttribute('data-i18n');
   if(tab==='tabAnalytics') renderCharts();
   if(tab==='tabTrends')    renderTrends();
   if(tab==='tabYearly')    renderYearly();
+}
+
+function updateAmountField() {
+  const c = getCur();
+  // Update the amount label to show the actual currency symbol
+  const amountLabel = document.querySelector('label[data-i18n="amount"]');
+  if (amountLabel) amountLabel.textContent = `${t('amount').replace('(Rp)', '').trim()} (${c.symbol})`;
+  // Update amount input: allow decimals for decimal currencies, integers for IDR/JPY etc
+  const amountInput = document.getElementById('inp-amount');
+  if (amountInput) {
+    if (c.decimals > 0) {
+      amountInput.step = '0.01';
+      amountInput.placeholder = '10.00';
+    } else {
+      amountInput.step = '1';
+      amountInput.placeholder = '25000';
+    }
+  }
 }
 
 function toggleLang() {
@@ -1254,7 +1274,6 @@ async function _bootApp(user) {
   // Show cached data immediately — never block on profile/network
   allExpenses = loadCache();
   hideLoading();
-  console.log('_bootApp: cache loaded, entries:', allExpenses.length);
 
   // Load profile with a timeout so it never hangs
   let profileExists = false;
@@ -1262,56 +1281,46 @@ async function _bootApp(user) {
     const profilePromise = loadProfile();
     const timeoutPromise = new Promise(r => setTimeout(() => r(false), 4000));
     profileExists = await Promise.race([profilePromise, timeoutPromise]);
-    console.log('_bootApp: profileExists=', profileExists, 'userCurrency=', userCurrency);
   } catch(e) {
     console.warn('_bootApp: profile load failed:', e.message);
   }
 
   if (!profileExists) {
-    console.log('_bootApp: no profile found, checking for existing data...');
     const hasCachedData = allExpenses.length > 0;
-    console.log('_bootApp: hasCachedData=', hasCachedData);
 
     if (hasCachedData) {
-      console.log('_bootApp: existing user (cache) — assigning IDR');
       userCurrency = 'IDR';
       saveProfile('IDR').catch(e => console.warn('saveProfile failed:', e.message));
     } else {
       let hasDbData = false;
       try {
-        console.log('_bootApp: checking DB for existing expenses...');
         const checkPromise = db.from('expenses').select('id', { count: 'exact', head: true });
         const t = new Promise(r => setTimeout(() => r({ count: 0, data: null, error: null }), 3000));
         const result = await Promise.race([checkPromise, t]);
-        console.log('_bootApp: DB check result:', JSON.stringify(result));
         hasDbData = (result?.count || 0) > 0;
       } catch(e) {
         console.warn('_bootApp: DB check failed:', e.message);
       }
 
-      console.log('_bootApp: hasDbData=', hasDbData);
       if (hasDbData) {
-        console.log('_bootApp: existing user (DB) — assigning IDR');
         userCurrency = 'IDR';
         saveProfile('IDR').catch(e => console.warn('saveProfile failed:', e.message));
       } else {
-        console.log('_bootApp: new user — showing currency picker');
         showScreen('currency');
         return;
       }
     }
   }
 
-  console.log('_bootApp: showing app, currency=', userCurrency);
   showScreen('app');
   applyLanguage();
+  updateAmountField();
   refreshAllNavBars();
   backgroundSync();
 }
 
 async function backgroundSync() {
   setSyncStatus('syncing', 'loading');
-  console.log('Background sync starting...');
 
   // Small delay to let the UI settle first
   await new Promise(r => setTimeout(r, 300));

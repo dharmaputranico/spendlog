@@ -239,7 +239,6 @@
           <span id="lang-flag">🇮🇩</span>
           <span id="lang-label">ID</span>
         </button>
-        <div class="mbadge" id="currency-badge" title="Your currency">Rp IDR</div>
         <div class="user-pill" id="user-pill" title="">
           <span class="user-avatar" id="user-avatar">?</span>
           <span class="user-email-short" id="user-email-short"></span>
@@ -281,8 +280,8 @@
           <input id="inp-name" type="text" data-i18n-placeholder="namePlaceholder" autocomplete="off" />
         </div>
         <div class="field">
-          <label data-i18n="amount">Amount (Rp)</label>
-          <input id="inp-amount" type="number" placeholder="25000" min="0" />
+          <label data-i18n="amount" id="amount-label">Amount</label>
+          <input id="inp-amount" type="number" placeholder="25000" min="0" step="1" />
         </div>
         <div class="field">
           <label data-i18n="category">Category</label>
