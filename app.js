@@ -405,13 +405,16 @@ function hideLoading() {
 
 function applyUser(user) {
   currentUser = user;
-  const email  = user.email || '';
-  document.getElementById('user-avatar').textContent      = email.charAt(0).toUpperCase();
-  document.getElementById('user-email-short').textContent = email.split('@')[0];
-  document.getElementById('user-pill').title              = email;
-  // Update currency badge in header if it exists
-  const badge = document.getElementById('currency-badge');
-  if (badge && userCurrency) badge.textContent = getCur().symbol + ' ' + userCurrency;
+  const email = user.email || '';
+  // null-check every element — main-app may still be hidden when this runs
+  const avatarEl = document.getElementById('user-avatar');
+  const emailEl  = document.getElementById('user-email-short');
+  const pillEl   = document.getElementById('user-pill');
+  const badgeEl  = document.getElementById('currency-badge');
+  if (avatarEl) avatarEl.textContent = email.charAt(0).toUpperCase();
+  if (emailEl)  emailEl.textContent  = email.split('@')[0];
+  if (pillEl)   pillEl.title         = email;
+  if (badgeEl && userCurrency) badgeEl.textContent = getCur().symbol + ' ' + userCurrency;
 }
 
 // ── CACHE (per user) ───────────────────────────────────────────────────────
@@ -1229,6 +1232,21 @@ let _appReady = false;
 
 async function bootApp(user) {
   if (_appReady) return; // prevent double-boot
+  console.log('bootApp started for:', user?.email);
+  try {
+    await _bootApp(user);
+  } catch(e) {
+    console.error('bootApp crashed:', e);
+    // Last resort — show the app anyway so user is never stuck
+    hideLoading();
+    showScreen('app');
+    applyLanguage();
+    refreshAllNavBars();
+    backgroundSync();
+  }
+}
+
+async function _bootApp(user) {
   _appReady = true;
   applyUser(user);
   buildCategorySelect();
@@ -1236,6 +1254,7 @@ async function bootApp(user) {
   // Show cached data immediately — never block on profile/network
   allExpenses = loadCache();
   hideLoading();
+  console.log('Cache loaded, entries:', allExpenses.length);
 
   // Load profile with a timeout so it never hangs
   let profileExists = false;
