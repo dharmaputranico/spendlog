@@ -1234,37 +1234,60 @@ async function bootApp(user) {
   applyUser(user);
   buildCategorySelect();
 
-  // Load user profile (currency preference)
-  const profileExists = await loadProfile();
-
-  if (!profileExists) {
-    // No profile at all — could be new user or profile missing
-    // Check if they have existing expenses to distinguish new vs existing user
-    hideLoading();
-    const { count } = await db.from('expenses').select('id', { count: 'exact', head: true });
-    if (count > 0) {
-      // Existing user with data — silently assign IDR and proceed
-      await saveProfile('IDR');
-      showScreen('app');
-      applyLanguage();
-      refreshAllNavBars();
-      allExpenses = loadCache();
-      backgroundSync();
-    } else {
-      // Brand new user — show currency picker
-      showScreen('currency');
-    }
-    return;
-  }
-
-  // Profile loaded, currency set — go straight to app
+  // Show cached data immediately — never block on profile/network
   allExpenses = loadCache();
   hideLoading();
+
+  // Load profile with a timeout so it never hangs
+  let profileExists = false;
+  try {
+    const profilePromise = loadProfile();
+    const timeoutPromise = new Promise(r => setTimeout(() => r(false), 4000));
+    profileExists = await Promise.race([profilePromise, timeoutPromise]);
+    console.log('Profile loaded:', profileExists, 'currency:', userCurrency);
+  } catch(e) {
+    console.warn('Profile load failed (non-fatal):', e.message);
+  }
+
+  if (!profileExists) {
+    // No profile — check if existing user or new user
+    // Use cached expenses to decide (avoids extra network call)
+    const hasCachedData = allExpenses.length > 0;
+
+    if (hasCachedData) {
+      // Existing user — silently assign IDR
+      console.log('Existing user detected via cache — assigning IDR');
+      userCurrency = 'IDR';
+      saveProfile('IDR').catch(e => console.warn('saveProfile failed:', e.message));
+    } else {
+      // Could be new user — do a quick DB check with timeout
+      let hasDbData = false;
+      try {
+        const checkPromise = db.from('expenses').select('id', { count: 'exact', head: true });
+        const t = new Promise(r => setTimeout(() => r({ count: 0 }), 3000));
+        const result = await Promise.race([checkPromise, t]);
+        hasDbData = (result?.count || 0) > 0;
+      } catch(e) {
+        console.warn('expenses count check failed:', e.message);
+      }
+
+      if (hasDbData) {
+        console.log('Existing user detected via DB — assigning IDR');
+        userCurrency = 'IDR';
+        saveProfile('IDR').catch(e => console.warn('saveProfile failed:', e.message));
+      } else {
+        // Truly new user — show currency picker
+        console.log('New user — showing currency picker');
+        showScreen('currency');
+        return;
+      }
+    }
+  }
+
+  // Go to app
   showScreen('app');
   applyLanguage();
   refreshAllNavBars();
-
-  // Fetch fresh data in background
   backgroundSync();
 }
 
