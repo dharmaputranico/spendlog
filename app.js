@@ -6,10 +6,9 @@
 
 // ── SUPABASE ───────────────────────────────────────────────────────────────
 
-// Credentials come from config.js (auto-switches staging vs production)
-const SUPABASE_URL      = window.SPENDLOG_CONFIG.supabaseUrl;
-const SUPABASE_KEY      = window.SPENDLOG_CONFIG.supabaseKey;
-const SUPABASE_AUTH_URL = window.SPENDLOG_CONFIG.supabaseAuthUrl;
+const SUPABASE_URL      = 'https://wpnsxvpjxfyevrdxqiln.supabase.co';
+const SUPABASE_KEY      = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbnN4dnBqeGZ5ZXZyZHhxaWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDA2MzMsImV4cCI6MjA5MzI3NjYzM30.zNKyyLipYPlCy82RRS66yy5ApqS8t_feNEx_xDnnWu0';
+const SUPABASE_AUTH_URL = 'https://auth.spendlog.id';
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -17,7 +16,7 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storageKey: window.SPENDLOG_CONFIG.isStaging ? 'spendlog_auth_staging' : 'spendlog_auth',
+    storageKey: 'spendlog_auth',
     storage: window.localStorage,
     url: SUPABASE_AUTH_URL,
   }
