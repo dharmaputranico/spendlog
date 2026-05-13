@@ -202,6 +202,27 @@
   </div>
 
   <!-- ══════════════════════════════════════
+       CURRENCY SETUP SCREEN (new users only)
+  ══════════════════════════════════════ -->
+  <div id="currency-screen" style="display:none">
+    <div class="currency-card">
+      <div class="currency-logo">spend<span>.</span>log</div>
+      <div class="currency-step">1 of 1 · Quick setup</div>
+      <div class="currency-title" id="cur-title">Choose your currency</div>
+      <div class="currency-desc" id="cur-desc">This sets how all your expenses are displayed. Choose carefully — this cannot be changed later.</div>
+
+      <div class="currency-grid" id="currency-grid">
+        <!-- filled by JS -->
+      </div>
+
+      <button class="currency-confirm" id="currency-confirm" onclick="confirmCurrency()" disabled>
+        <span id="currency-confirm-label">Select a currency to continue</span>
+      </button>
+      <div class="currency-note" id="cur-note">⚠ Your currency choice is permanent and cannot be changed later.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
        MAIN APP
   ══════════════════════════════════════ -->
   <div class="app" id="main-app" style="display:none">
@@ -218,6 +239,7 @@
           <span id="lang-flag">🇮🇩</span>
           <span id="lang-label">ID</span>
         </button>
+        <div class="mbadge" id="currency-badge" title="Your currency">Rp IDR</div>
         <div class="user-pill" id="user-pill" title="">
           <span class="user-avatar" id="user-avatar">?</span>
           <span class="user-email-short" id="user-email-short"></span>
@@ -456,6 +478,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script><!-- must load before app.js -->
   <script src="app.js"></script>
 </body>
 </html>

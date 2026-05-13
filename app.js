@@ -6,22 +6,53 @@
 
 // ── SUPABASE ───────────────────────────────────────────────────────────────
 
-// Database queries must use the original Supabase URL (custom domain only supports auth)
-const SUPABASE_URL  = 'https://wpnsxvpjxfyevrdxqiln.supabase.co';
-// Custom domain is used only for the auth flow (so Google OAuth shows "auth.spendlog.id")
-const SUPABASE_AUTH_URL = 'https://auth.spendlog.id';
-const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbnN4dnBqeGZ5ZXZyZHhxaWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDA2MzMsImV4cCI6MjA5MzI3NjYzM30.zNKyyLipYPlCy82RRS66yy5ApqS8t_feNEx_xDnnWu0';
+// Credentials come from config.js (auto-switches staging vs production)
+const SUPABASE_URL      = window.SPENDLOG_CONFIG.supabaseUrl;
+const SUPABASE_KEY      = window.SPENDLOG_CONFIG.supabaseKey;
+const SUPABASE_AUTH_URL = window.SPENDLOG_CONFIG.supabaseAuthUrl;
+
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storageKey: 'spendlog_auth',
+    storageKey: window.SPENDLOG_CONFIG.isStaging ? 'spendlog_auth_staging' : 'spendlog_auth',
     storage: window.localStorage,
-    url: SUPABASE_AUTH_URL  // auth requests go through custom domain → shows "auth.spendlog.id" in Google OAuth
+    url: SUPABASE_AUTH_URL,
   }
 });
+
+// ── CURRENCIES ────────────────────────────────────────────────────────────
+
+const CURRENCIES = [
+  { code:'IDR', name:'Indonesian Rupiah',   symbol:'Rp',  flag:'🇮🇩', locale:'id-ID', decimals:0 },
+  { code:'USD', name:'US Dollar',           symbol:'$',   flag:'🇺🇸', locale:'en-US', decimals:2 },
+  { code:'SGD', name:'Singapore Dollar',    symbol:'S$',  flag:'🇸🇬', locale:'en-SG', decimals:2 },
+  { code:'MYR', name:'Malaysian Ringgit',   symbol:'RM',  flag:'🇲🇾', locale:'ms-MY', decimals:2 },
+  { code:'JPY', name:'Japanese Yen',        symbol:'¥',   flag:'🇯🇵', locale:'ja-JP', decimals:0 },
+  { code:'KRW', name:'Korean Won',          symbol:'₩',   flag:'🇰🇷', locale:'ko-KR', decimals:0 },
+  { code:'CNY', name:'Chinese Yuan',        symbol:'¥',   flag:'🇨🇳', locale:'zh-CN', decimals:2 },
+  { code:'HKD', name:'Hong Kong Dollar',    symbol:'HK$', flag:'🇭🇰', locale:'zh-HK', decimals:2 },
+  { code:'THB', name:'Thai Baht',           symbol:'฿',   flag:'🇹🇭', locale:'th-TH', decimals:2 },
+  { code:'PHP', name:'Philippine Peso',     symbol:'₱',   flag:'🇵🇭', locale:'fil-PH',decimals:2 },
+  { code:'VND', name:'Vietnamese Dong',     symbol:'₫',   flag:'🇻🇳', locale:'vi-VN', decimals:0 },
+  { code:'INR', name:'Indian Rupee',        symbol:'₹',   flag:'🇮🇳', locale:'hi-IN', decimals:2 },
+  { code:'AUD', name:'Australian Dollar',   symbol:'A$',  flag:'🇦🇺', locale:'en-AU', decimals:2 },
+  { code:'EUR', name:'Euro',                symbol:'€',   flag:'🇪🇺', locale:'de-DE', decimals:2 },
+  { code:'GBP', name:'British Pound',       symbol:'£',   flag:'🇬🇧', locale:'en-GB', decimals:2 },
+  { code:'CAD', name:'Canadian Dollar',     symbol:'C$',  flag:'🇨🇦', locale:'en-CA', decimals:2 },
+  { code:'CHF', name:'Swiss Franc',         symbol:'Fr',  flag:'🇨🇭', locale:'de-CH', decimals:2 },
+  { code:'SAR', name:'Saudi Riyal',         symbol:'SR',  flag:'🇸🇦', locale:'ar-SA', decimals:2 },
+  { code:'AED', name:'UAE Dirham',          symbol:'AED', flag:'🇦🇪', locale:'ar-AE', decimals:2 },
+];
+
+let userCurrency  = null; // set after profile load
+let selectedCurCode = null; // for the setup screen picker
+
+function getCur() {
+  return CURRENCIES.find(c => c.code === (userCurrency || 'IDR')) || CURRENCIES[0];
+}
 
 // ── i18n ───────────────────────────────────────────────────────────────────
 
@@ -344,13 +375,18 @@ async function signOut() {
 // ── SCREEN SWITCHING ───────────────────────────────────────────────────────
 
 function showScreen(name) {
-  document.getElementById('auth-screen').style.display = name==='auth' ? '' : 'none';
-  document.getElementById('main-app').style.display    = name==='app'  ? '' : 'none';
+  document.getElementById('auth-screen').style.display     = name==='auth'     ? '' : 'none';
+  document.getElementById('currency-screen').style.display = name==='currency' ? '' : 'none';
+  document.getElementById('main-app').style.display        = name==='app'      ? '' : 'none';
   if (name === 'auth') {
     goToSlide(0);
     startSlideTimer();
   } else {
     stopSlideTimer();
+  }
+  if (name === 'currency') {
+    buildCurrencyGrid();
+    applyCurrencyI18n();
   }
 }
 
@@ -374,6 +410,9 @@ function applyUser(user) {
   document.getElementById('user-avatar').textContent      = email.charAt(0).toUpperCase();
   document.getElementById('user-email-short').textContent = email.split('@')[0];
   document.getElementById('user-pill').title              = email;
+  // Update currency badge in header if it exists
+  const badge = document.getElementById('currency-badge');
+  if (badge && userCurrency) badge.textContent = getCur().symbol + ' ' + userCurrency;
 }
 
 // ── CACHE (per user) ───────────────────────────────────────────────────────
@@ -381,6 +420,76 @@ function applyUser(user) {
 function cacheKey()  { return `spendlog_cache_${currentUser?.id||'anon'}`; }
 function cacheAll()  { try { localStorage.setItem(cacheKey(), JSON.stringify(allExpenses)); } catch(e){} }
 function loadCache() { try { return JSON.parse(localStorage.getItem(cacheKey())||'[]'); } catch(e){ return []; } }
+
+// ── PROFILE ───────────────────────────────────────────────────────────────
+
+async function loadProfile() {
+  const { data, error } = await db.from('profiles').select('currency').eq('id', currentUser.id).single();
+  if (!error && data?.currency) {
+    userCurrency = data.currency;
+    return true; // profile found
+  }
+  return false;
+}
+
+async function saveProfile(currencyCode) {
+  userCurrency = currencyCode;
+  const { error } = await db.from('profiles')
+    .upsert({ id: currentUser.id, currency: currencyCode, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+  if (error) console.error('saveProfile error:', error);
+}
+
+// ── CURRENCY SETUP SCREEN ──────────────────────────────────────────────────
+
+function buildCurrencyGrid() {
+  const grid = document.getElementById('currency-grid');
+  if (!grid) return;
+  grid.innerHTML = CURRENCIES.map(c => `
+    <div class="currency-option" id="cur-opt-${c.code}" onclick="selectCurrency('${c.code}')">
+      <span class="cur-flag">${c.flag}</span>
+      <div class="cur-info">
+        <span class="cur-code">${c.code}</span>
+        <span class="cur-name">${c.name}</span>
+      </div>
+      <span class="cur-symbol">${c.symbol}</span>
+    </div>`).join('');
+}
+
+function selectCurrency(code) {
+  selectedCurCode = code;
+  document.querySelectorAll('.currency-option').forEach(el => el.classList.remove('selected'));
+  const opt = document.getElementById(`cur-opt-${code}`);
+  if (opt) opt.classList.add('selected');
+  const btn = document.getElementById('currency-confirm');
+  const lbl = document.getElementById('currency-confirm-label');
+  const cur = CURRENCIES.find(c => c.code === code);
+  if (btn) btn.disabled = false;
+  if (lbl && cur) lbl.textContent = `Continue with ${cur.symbol} ${cur.code}`;
+}
+
+async function confirmCurrency() {
+  if (!selectedCurCode) return;
+  const btn = document.getElementById('currency-confirm');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  await saveProfile(selectedCurCode);
+  showScreen('app');
+  applyLanguage();
+  refreshAllNavBars();
+}
+
+function applyCurrencyI18n() {
+  // Update currency screen text based on language
+  const titleEl = document.getElementById('cur-title');
+  const descEl  = document.getElementById('cur-desc');
+  const noteEl  = document.getElementById('cur-note');
+  if (titleEl) titleEl.textContent = lang === 'id' ? 'Pilih mata uangmu' : 'Choose your currency';
+  if (descEl)  descEl.textContent  = lang === 'id'
+    ? 'Ini menentukan tampilan semua pengeluaranmu. Pilih dengan cermat — tidak bisa diubah setelah ini.'
+    : 'This sets how all your expenses are displayed. Choose carefully — this cannot be changed later.';
+  if (noteEl)  noteEl.textContent  = lang === 'id'
+    ? '⚠ Pilihan mata uang bersifat permanen dan tidak bisa diubah.'
+    : '⚠ Your currency choice is permanent and cannot be changed later.';
+}
 
 // ── ROW MAPPING ────────────────────────────────────────────────────────────
 
@@ -653,11 +762,29 @@ function getWeekNum(d) {
   const j=new Date(d.getFullYear(),0,1);
   return Math.ceil(((d-j)/86400000+j.getDay()+1)/7);
 }
-function fmt(n)  { return 'Rp '+Math.round(n).toLocaleString('id-ID'); }
+function fmt(n) {
+  const c = getCur();
+  const rounded = c.decimals === 0 ? Math.round(n) : parseFloat(n.toFixed(c.decimals));
+  return c.symbol + ' ' + rounded.toLocaleString(c.locale, {
+    minimumFractionDigits: c.decimals,
+    maximumFractionDigits: c.decimals
+  });
+}
 function fmtS(n) {
-  if(n>=1e9) return 'Rp '+(n/1e9).toFixed(1)+'M';
-  if(n>=1e6) return 'Rp '+(n/1e6).toFixed(1)+(lang==='id'?'jt':'mio');
-  return 'Rp '+Math.round(n/1000)+'k';
+  const c = getCur();
+  const sym = c.symbol;
+  if (c.decimals === 0) {
+    if (n >= 1e12) return sym + (n/1e12).toFixed(1) + 'T';
+    if (n >= 1e9)  return sym + (n/1e9).toFixed(1) + 'B';
+    if (n >= 1e6)  return sym + (n/1e6).toFixed(1) + (c.code === 'IDR' ? (lang === 'id' ? 'jt' : 'mio') : 'M');
+    if (n >= 1e3)  return sym + Math.round(n/1e3) + 'k';
+    return sym + ' ' + Math.round(n).toLocaleString(c.locale);
+  } else {
+    if (n >= 1e9) return sym + (n/1e9).toFixed(1) + 'B';
+    if (n >= 1e6) return sym + (n/1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return sym + (n/1e3).toFixed(1) + 'k';
+    return sym + ' ' + n.toFixed(c.decimals);
+  }
 }
 function pctBadge(pct) {
   if(pct===null) return `<span class="badge b-neu">—</span>`;
@@ -975,6 +1102,7 @@ function applyLanguage() {
   document.getElementById('lang-label').textContent=isEN?'ID':'EN';
   buildCategorySelect();
   applyWalkthroughLang();
+  applyCurrencyI18n();
   refreshAllNavBars();
   buildFilterChips();
   renderLedger();
@@ -1106,14 +1234,37 @@ async function bootApp(user) {
   applyUser(user);
   buildCategorySelect();
 
-  // Show app immediately from cache — user sees data right away
+  // Load user profile (currency preference)
+  const profileExists = await loadProfile();
+
+  if (!profileExists) {
+    // No profile at all — could be new user or profile missing
+    // Check if they have existing expenses to distinguish new vs existing user
+    hideLoading();
+    const { count } = await db.from('expenses').select('id', { count: 'exact', head: true });
+    if (count > 0) {
+      // Existing user with data — silently assign IDR and proceed
+      await saveProfile('IDR');
+      showScreen('app');
+      applyLanguage();
+      refreshAllNavBars();
+      allExpenses = loadCache();
+      backgroundSync();
+    } else {
+      // Brand new user — show currency picker
+      showScreen('currency');
+    }
+    return;
+  }
+
+  // Profile loaded, currency set — go straight to app
   allExpenses = loadCache();
   hideLoading();
   showScreen('app');
   applyLanguage();
   refreshAllNavBars();
 
-  // Then quietly fetch fresh data in the background
+  // Fetch fresh data in background
   backgroundSync();
 }
 
@@ -1123,6 +1274,10 @@ async function backgroundSync() {
 
   // Small delay to let the UI settle first
   await new Promise(r => setTimeout(r, 300));
+
+  // Update currency badge
+  const badge = document.getElementById('currency-badge');
+  if (badge && userCurrency) badge.textContent = getCur().symbol + ' ' + userCurrency;
 
   // Fetch fresh data (token is managed automatically by Supabase client)
   await loadFromSupabase();
