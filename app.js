@@ -1254,7 +1254,7 @@ async function _bootApp(user) {
   // Show cached data immediately — never block on profile/network
   allExpenses = loadCache();
   hideLoading();
-  console.log('Cache loaded, entries:', allExpenses.length);
+  console.log('_bootApp: cache loaded, entries:', allExpenses.length);
 
   // Load profile with a timeout so it never hangs
   let profileExists = false;
@@ -1262,47 +1262,47 @@ async function _bootApp(user) {
     const profilePromise = loadProfile();
     const timeoutPromise = new Promise(r => setTimeout(() => r(false), 4000));
     profileExists = await Promise.race([profilePromise, timeoutPromise]);
-    console.log('Profile loaded:', profileExists, 'currency:', userCurrency);
+    console.log('_bootApp: profileExists=', profileExists, 'userCurrency=', userCurrency);
   } catch(e) {
-    console.warn('Profile load failed (non-fatal):', e.message);
+    console.warn('_bootApp: profile load failed:', e.message);
   }
 
   if (!profileExists) {
-    // No profile — check if existing user or new user
-    // Use cached expenses to decide (avoids extra network call)
+    console.log('_bootApp: no profile found, checking for existing data...');
     const hasCachedData = allExpenses.length > 0;
+    console.log('_bootApp: hasCachedData=', hasCachedData);
 
     if (hasCachedData) {
-      // Existing user — silently assign IDR
-      console.log('Existing user detected via cache — assigning IDR');
+      console.log('_bootApp: existing user (cache) — assigning IDR');
       userCurrency = 'IDR';
       saveProfile('IDR').catch(e => console.warn('saveProfile failed:', e.message));
     } else {
-      // Could be new user — do a quick DB check with timeout
       let hasDbData = false;
       try {
+        console.log('_bootApp: checking DB for existing expenses...');
         const checkPromise = db.from('expenses').select('id', { count: 'exact', head: true });
-        const t = new Promise(r => setTimeout(() => r({ count: 0 }), 3000));
+        const t = new Promise(r => setTimeout(() => r({ count: 0, data: null, error: null }), 3000));
         const result = await Promise.race([checkPromise, t]);
+        console.log('_bootApp: DB check result:', JSON.stringify(result));
         hasDbData = (result?.count || 0) > 0;
       } catch(e) {
-        console.warn('expenses count check failed:', e.message);
+        console.warn('_bootApp: DB check failed:', e.message);
       }
 
+      console.log('_bootApp: hasDbData=', hasDbData);
       if (hasDbData) {
-        console.log('Existing user detected via DB — assigning IDR');
+        console.log('_bootApp: existing user (DB) — assigning IDR');
         userCurrency = 'IDR';
         saveProfile('IDR').catch(e => console.warn('saveProfile failed:', e.message));
       } else {
-        // Truly new user — show currency picker
-        console.log('New user — showing currency picker');
+        console.log('_bootApp: new user — showing currency picker');
         showScreen('currency');
         return;
       }
     }
   }
 
-  // Go to app
+  console.log('_bootApp: showing app, currency=', userCurrency);
   showScreen('app');
   applyLanguage();
   refreshAllNavBars();
