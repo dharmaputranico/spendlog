@@ -1264,15 +1264,32 @@ function buildCategorySelect() {
 // ── AMOUNT THOUSANDS SEPARATOR ────────────────────────────────────────────
 
 function formatAmountInput(el) {
+  // While typing: only strip non-numeric chars, do NOT reformat
+  // (reformatting mid-type moves cursor and drops digits)
+  const c = getCur();
+  const pos = el.selectionStart;
+  const raw = el.value.replace(/[^0-9.]/g, '');
+  if (el.value !== raw) {
+    el.value = raw;
+    el.setSelectionRange(pos, pos);
+  }
+}
+
+function formatAmountBlur(el) {
+  // On blur: apply thousands separator for display
   const c = getCur();
   const raw = el.value.replace(/[^0-9.]/g, '');
   if (!raw) return;
   if (c.decimals === 0) {
-    // Integer currencies: add thousand separator
     const num = parseInt(raw) || 0;
-    el.value = num.toLocaleString(c.locale);
+    if (num > 0) el.value = num.toLocaleString(c.locale);
   }
-  // Decimal currencies: don't auto-format to avoid cursor issues
+}
+
+function formatAmountFocus(el) {
+  // On focus: strip thousands separator so user can type freely
+  const raw = el.value.replace(/[^0-9.]/g, '');
+  el.value = raw;
 }
 
 // ── WHAT'S NEW BANNER ──────────────────────────────────────────────────────
@@ -1408,6 +1425,8 @@ document.getElementById('cat-modal').addEventListener('click',e=>{if(e.target===
 document.getElementById('delete-cat-modal').addEventListener('click',e=>{if(e.target===document.getElementById('delete-cat-modal'))closeDeleteCatModal();});
 // Thousands separator on amount input
 document.getElementById('inp-amount').addEventListener('input', function(){ formatAmountInput(this); });
+document.getElementById('inp-amount').addEventListener('blur',  function(){ formatAmountBlur(this); });
+document.getElementById('inp-amount').addEventListener('focus', function(){ formatAmountFocus(this); });
 
 function toCSVRow(f){return f.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',');}
 
