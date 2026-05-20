@@ -688,3 +688,67 @@ tbody td { padding: 9px 8px; font-size: 12px; vertical-align: middle; }
 @media (max-width: 400px) {
   .currency-grid { grid-template-columns: 1fr; }
 }
+
+/* ── MANAGE CATEGORIES LINK ───────────────── */
+.manage-cats-row { margin-top: 6px; }
+.manage-cats-link {
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; font-weight: 500; color: var(--accent);
+  font-family: 'Sora', sans-serif; padding: 0;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.manage-cats-link:hover { color: var(--accent-d); }
+
+/* ── WHAT'S NEW BANNER ────────────────────── */
+.whats-new-banner {
+  background: var(--bg);
+  border: .5px solid var(--bdr);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--rl);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+.wnb-content { padding: 12px 14px; }
+.wnb-top {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 2px;
+}
+.wnb-badge {
+  font-size: 12px; font-weight: 500; color: var(--accent);
+}
+.wnb-close {
+  background: none; border: none; font-size: 17px;
+  color: var(--muted); cursor: pointer; padding: 0 2px;
+}
+.wnb-list {
+  margin: 0 0 8px 1rem;
+  font-size: 12px; color: var(--muted);
+  line-height: 1.7;
+}
+.wnb-btn {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--r); padding: 5px 14px;
+  font-family: 'Sora', sans-serif; font-size: 12px;
+  font-weight: 500; cursor: pointer; transition: background .15s;
+}
+.wnb-btn:hover { background: var(--accent-d); }
+
+/* ── CATEGORY MANAGER MODAL ───────────────── */
+.modal-cat { max-width: 480px; }
+.cm-group { margin-bottom: 12px; }
+.cm-group-label {
+  font-size: 10px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: .4px; color: var(--muted); margin-bottom: 5px;
+}
+.cm-cat-list { display: flex; flex-direction: column; gap: 4px; }
+.cm-cat-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px;
+  border: .5px solid var(--bdr);
+  border-radius: var(--r);
+  background: var(--surf);
+}
+.cm-add-row {
+  display: flex; align-items: flex-end; gap: 8px; margin-top: 8px;
+}
+.cm-add-row .field { flex: 1; }

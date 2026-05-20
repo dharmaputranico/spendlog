@@ -248,6 +248,23 @@
       </div>
     </div>
 
+    <!-- WHAT'S NEW BANNER -->
+    <div id="whats-new-banner" style="display:none" class="whats-new-banner">
+      <div class="wnb-content">
+        <div class="wnb-top">
+          <span class="wnb-badge">✨ <span class="banner-title">What's new</span></span>
+          <button class="wnb-close" onclick="dismissBanner()">×</button>
+        </div>
+        <div class="banner-desc" style="font-size:12px;color:var(--muted);margin:4px 0 6px">3 updates just for you:</div>
+        <ul class="wnb-list">
+          <li class="banner-item-1">Customise categories — add or remove as needed</li>
+          <li class="banner-item-2">Add your own category to any group</li>
+          <li class="banner-item-3">Amount field now shows thousands separator</li>
+        </ul>
+        <button class="wnb-btn banner-gotit" onclick="dismissBanner()">Got it!</button>
+      </div>
+    </div>
+
     <!-- METRICS -->
     <div class="metrics">
       <div class="metric">
@@ -291,11 +308,10 @@
           <button class="add-btn" id="add-btn" onclick="addExpense()" data-i18n="addBtn">+ Add</button>
         </div>
       </div>
-      <div class="other-row" id="other-row">
-        <div class="field">
-          <label data-i18n="specifyCategory">Specify category</label>
-          <input id="inp-other-cat" type="text" data-i18n-placeholder="specifyPlaceholder" />
-        </div>
+      <div class="manage-cats-row">
+        <button class="manage-cats-link" onclick="openCatManager()">
+          ⚙ <span data-i18n="manageCategories">Manage categories</span> →
+        </button>
       </div>
       <div class="manual-date-row">
         <label data-i18n="manualDate">Manual date (optional):</label>
@@ -468,6 +484,51 @@
       <div style="display:flex;gap:8px">
         <button class="modal-btn mbtn-cancel" onclick="closeDeleteModal()" style="flex:1" data-i18n="cancel">Cancel</button>
         <button class="modal-btn mbtn-delete" onclick="confirmDelete()"    style="flex:1" data-i18n="yesDelete">Yes, delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORY MANAGER MODAL -->
+  <div class="modal-overlay" id="cat-modal">
+    <div class="modal modal-cat">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <div class="modal-title" style="margin-bottom:0" data-i18n="catManagerTitle">Manage categories</div>
+        <button class="modal-close" onclick="closeCatManager()">×</button>
+      </div>
+      <!-- Category list by group -->
+      <div id="cat-manager-body" style="max-height:340px;overflow-y:auto;margin-bottom:1rem"></div>
+      <!-- Add new category -->
+      <div style="border-top:.5px solid var(--bdr);padding-top:1rem">
+        <div class="modal-label" data-i18n="addCategory">Add category</div>
+        <div class="cm-add-row">
+          <div class="field" style="margin-bottom:0">
+            <label data-i18n="groupLabel">Group</label>
+            <select id="cm-group-sel" style="font-size:12px;padding:6px 8px">
+              <option value="groupFoodDrinks">Food &amp; Drinks</option>
+              <option value="groupLiving">Living</option>
+              <option value="groupLifestyle">Lifestyle</option>
+              <option value="groupFinance">Finance</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0;flex:1">
+            <label data-i18n="name">Name</label>
+            <input id="cm-new-name" type="text" data-i18n-placeholder="catNamePlaceholder" placeholder="e.g. Bubble tea…" />
+          </div>
+          <button class="add-btn" style="height:34px;margin-top:auto" onclick="addNewCategory()">+ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE CATEGORY CONFIRM MODAL -->
+  <div class="modal-overlay" id="delete-cat-modal">
+    <div class="modal modal-sm">
+      <div class="modal-title" data-i18n="deleteCat">Delete category?</div>
+      <div class="delete-preview" id="delete-cat-preview" style="margin-bottom:.75rem"></div>
+      <div class="modal-desc" style="margin-bottom:1.25rem" data-i18n="deleteCatWarning">Expenses with this category will keep their label, but it won't appear in future entries.</div>
+      <div style="display:flex;gap:8px">
+        <button class="modal-btn mbtn-cancel" onclick="closeDeleteCatModal()" style="flex:1" data-i18n="cancel">Cancel</button>
+        <button class="modal-btn mbtn-delete" onclick="doDeleteCat()" style="flex:1" data-i18n="yesDelete">Yes, delete</button>
       </div>
     </div>
   </div>

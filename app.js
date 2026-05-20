@@ -115,6 +115,19 @@ const I18N = {
     errFillFields:'Please enter your email and password.',
     errPasswordShort:'Password must be at least 6 characters.',
     errPasswordMatch:'Passwords do not match.',
+    manageCategories:'Manage categories',
+    catManagerTitle:'Manage categories',
+    addCategory:'Add category',
+    catNamePlaceholder:'e.g. Bubble tea, Pet food…',
+    groupLabel:'Group',
+    deleteCat:'Delete category?',
+    deleteCatWarning:"Expenses with this category will keep their label, but it won't appear in future entries.",
+    whatsNewTitle:"What's new",
+    whatsNewDesc:'3 updates just for you:',
+    whatsNew1:'Customise categories — add or remove as needed',
+    whatsNew2:'Add your own category to any group',
+    whatsNew3:'Amount field now shows thousands separator',
+    gotIt:'Got it!',
   },
   id: {
     importExport:'⇅ Impor / Ekspor', thisMonth:'Bulan ini', thisWeek:'Minggu ini',
@@ -175,6 +188,19 @@ const I18N = {
     errFillFields:'Masukkan email dan kata sandimu.',
     errPasswordShort:'Kata sandi minimal 6 karakter.',
     errPasswordMatch:'Kata sandi tidak cocok.',
+    manageCategories:'Kelola kategori',
+    catManagerTitle:'Kelola kategori',
+    addCategory:'Tambah kategori',
+    catNamePlaceholder:'cth. Bubble tea, Makanan kucing…',
+    groupLabel:'Grup',
+    deleteCat:'Hapus kategori?',
+    deleteCatWarning:'Pengeluaran dengan kategori ini akan tetap ada, tapi tidak muncul di entri baru.',
+    whatsNewTitle:'Yang baru',
+    whatsNewDesc:'3 pembaruan untukmu:',
+    whatsNew1:'Sesuaikan kategori — tambah atau hapus sesuai kebutuhan',
+    whatsNew2:'Tambah kategori sendiri ke grup manapun',
+    whatsNew3:'Kolom jumlah kini menampilkan pemisah ribuan',
+    gotIt:'Mengerti!',
   }
 };
 
@@ -196,6 +222,71 @@ const CAT_CSS = [
   'cc-sports','cc-shopping','cc-entertainment','cc-education',
   'cc-installment','cc-subscription','cc-savings','cc-others'
 ];
+
+// ── CUSTOM CATEGORIES (stored in localStorage per user) ───────────────────
+
+// Default category groups — used to seed fresh installs
+const DEFAULT_CAT_GROUPS = [
+  { gKey:'groupFoodDrinks', cats:['catBreakfast','catLunch','catDinner','catCoffee','catSnack','catGroceries','catBabies'] },
+  { gKey:'groupLiving',     cats:['catUtilities','catTransport','catHealth','catDaily'] },
+  { gKey:'groupLifestyle',  cats:['catSports','catShopping','catEntertainment','catEducation'] },
+  { gKey:'groupFinance',    cats:['catInstallment','catSubscription','catSavings'] },
+];
+
+// userCats: array of { id, gKey, enName }
+// enName is the stored value (language-independent)
+// id is 'cat_<timestamp>' for custom, or the CAT_KEY for defaults
+let userCats = [];
+
+function catStoreKey() { return `spendlog_cats_${currentUser?.id||'anon'}`; }
+
+function loadUserCats() {
+  try {
+    const stored = localStorage.getItem(catStoreKey());
+    if (stored) { userCats = JSON.parse(stored); return; }
+  } catch(e) {}
+  // Seed from defaults
+  userCats = [];
+  DEFAULT_CAT_GROUPS.forEach(g => {
+    g.cats.forEach(key => {
+      userCats.push({ id: key, gKey: g.gKey, enName: I18N.en[key] });
+    });
+  });
+  saveUserCats();
+}
+
+function saveUserCats() {
+  try { localStorage.setItem(catStoreKey(), JSON.stringify(userCats)); } catch(e) {}
+}
+
+// Get display name for a cat entry
+function catEntryDisplay(cat) {
+  // Try i18n key first, then fall back to enName
+  const byKey = userCats.find(c => c.id === cat.id);
+  if (!byKey) return cat.enName;
+  const i18nKey = byKey.id; // for default cats, id IS the catKey
+  return (I18N[lang]?.[i18nKey]) || byKey.enName;
+}
+
+// Override catENtoDisplay, catENtoColor, catENtoCSS to handle custom cats
+function catENtoDisplay(enName) {
+  const i = CAT_KEYS.findIndex(k => I18N.en[k] === enName);
+  if (i >= 0) return t(CAT_KEYS[i]);
+  return enName; // custom category — display as-is
+}
+function catENtoColor(enName) {
+  const i = CAT_KEYS.findIndex(k => I18N.en[k] === enName);
+  if (i >= 0) return CAT_COLS[i];
+  // Custom cats get a deterministic color from a hash
+  let h = 0; for (let c of enName) h = (h * 31 + c.charCodeAt(0)) & 0xFFFFFF;
+  const palette = ['#5C6BC0','#26A69A','#EF7F1A','#EC407A','#7E57C2','#26C6DA','#66BB6A','#FFA726'];
+  return palette[Math.abs(h) % palette.length];
+}
+function catENtoCSS(enName) {
+  const i = CAT_KEYS.findIndex(k => I18N.en[k] === enName);
+  if (i >= 0) return CAT_CSS[i];
+  return 'cc-others'; // custom cats use the "others" style
+}
 
 const MONTHS_EN    = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTHS_ID    = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -474,9 +565,11 @@ async function confirmCurrency() {
   const btn = document.getElementById('currency-confirm');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   await saveProfile(selectedCurCode);
+  loadUserCats();
   showScreen('app');
   applyLanguage();
   updateAmountField();
+  showWhatsNewBanner();
   refreshAllNavBars();
 }
 
@@ -655,19 +748,17 @@ function showToast(msg,dur=2800) {
 // ── FORM ───────────────────────────────────────────────────────────────────
 
 function onCatChange() {
-  document.getElementById('other-row').style.display =
-    document.getElementById('inp-cat').value===catKeyToEN('catOthers')?'block':'none';
+  // No more "specify below" — categories are fully managed
+  const otherRow = document.getElementById('other-row');
+  if (otherRow) otherRow.style.display = 'none';
 }
 
 async function addExpense() {
   const name   = document.getElementById('inp-name').value.trim();
-  const amount = parseFloat(document.getElementById('inp-amount').value);
-  const selVal = document.getElementById('inp-cat').value;
-  let cat = selVal;
-  if (selVal===catKeyToEN('catOthers')) {
-    const c=document.getElementById('inp-other-cat').value.trim();
-    if (c) cat=c;
-  }
+  // Amount input may have thousands separators — strip them before parsing
+  const rawAmt = document.getElementById('inp-amount').value.replace(/[^0-9.]/g,'');
+  const amount = parseFloat(rawAmt);
+  const cat    = document.getElementById('inp-cat').value;
   if (!name||isNaN(amount)||amount<=0) { document.getElementById('inp-name').focus(); return; }
 
   const manDate = document.getElementById('inp-date').value;
@@ -683,8 +774,7 @@ async function addExpense() {
 
   allExpenses.unshift(exp); ledgerPage=1;
   buildFilterChips(); renderLedger(); renderMetrics();
-  ['inp-name','inp-amount','inp-date','inp-other-cat'].forEach(id=>{document.getElementById(id).value='';});
-  document.getElementById('other-row').style.display='none';
+  ['inp-name','inp-amount','inp-date'].forEach(id=>{document.getElementById(id).value=''});
   document.getElementById('inp-name').focus();
 
   const btn=document.getElementById('add-btn'); btn.disabled=true;
@@ -1106,6 +1196,7 @@ function applyLanguage() {
   buildCategorySelect();
   applyWalkthroughLang();
   applyCurrencyI18n();
+  applyBannerLang();
   refreshAllNavBars();
   buildFilterChips();
   renderLedger();
@@ -1142,29 +1233,169 @@ function toggleLang() {
 }
 
 function buildCategorySelect() {
-  const sel=document.getElementById('inp-cat');
-  const cur=sel.value;
-  const groups=[
-    {lk:'groupFoodDrinks',cats:['catBreakfast','catLunch','catDinner','catCoffee','catSnack','catGroceries','catBabies']},
-    {lk:'groupLiving',    cats:['catUtilities','catTransport','catHealth','catDaily']},
-    {lk:'groupLifestyle', cats:['catSports','catShopping','catEntertainment','catEducation']},
-    {lk:'groupFinance',   cats:['catInstallment','catSubscription','catSavings']},
-  ];
-  sel.innerHTML='';
-  groups.forEach(g=>{
-    const og=document.createElement('optgroup'); og.label=t(g.lk);
-    g.cats.forEach(key=>{
-      const opt=document.createElement('option');
-      opt.value=catKeyToEN(key); opt.textContent=t(key);
-      if(key==='catLunch') opt.selected=true;
+  const sel = document.getElementById('inp-cat');
+  const cur = sel.value;
+  sel.innerHTML = '';
+
+  // Group cats from userCats by gKey
+  const groupKeys = ['groupFoodDrinks','groupLiving','groupLifestyle','groupFinance'];
+  groupKeys.forEach(gKey => {
+    const groupCats = userCats.filter(c => c.gKey === gKey);
+    if (!groupCats.length) return;
+    const og = document.createElement('optgroup');
+    og.label = t(gKey);
+    groupCats.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.enName;
+      opt.textContent = catENtoDisplay(cat.enName);
       og.appendChild(opt);
     });
     sel.appendChild(og);
   });
-  const oth=document.createElement('option');
-  oth.value=catKeyToEN('catOthers'); oth.textContent=t('catOthers');
-  sel.appendChild(oth);
-  if(cur) sel.value=cur;
+
+  // Default to first option if nothing selected or previous selection removed
+  if (cur && [...sel.options].some(o => o.value === cur)) {
+    sel.value = cur;
+  } else {
+    sel.selectedIndex = 0;
+  }
+}
+
+// ── AMOUNT THOUSANDS SEPARATOR ────────────────────────────────────────────
+
+function formatAmountInput(el) {
+  const c = getCur();
+  const raw = el.value.replace(/[^0-9.]/g, '');
+  if (!raw) return;
+  if (c.decimals === 0) {
+    // Integer currencies: add thousand separator
+    const num = parseInt(raw) || 0;
+    el.value = num.toLocaleString(c.locale);
+  }
+  // Decimal currencies: don't auto-format to avoid cursor issues
+}
+
+// ── WHAT'S NEW BANNER ──────────────────────────────────────────────────────
+
+const BANNER_KEY = 'spendlog_banner_v3';
+
+function showWhatsNewBanner() {
+  if (localStorage.getItem(BANNER_KEY)) return; // already dismissed
+  const el = document.getElementById('whats-new-banner');
+  if (el) el.style.display = '';
+}
+
+function dismissBanner() {
+  localStorage.setItem(BANNER_KEY, '1');
+  const el = document.getElementById('whats-new-banner');
+  if (el) el.style.display = 'none';
+}
+
+function applyBannerLang() {
+  const el = document.getElementById('whats-new-banner');
+  if (!el) return;
+  const titleEl = el.querySelector('.banner-title');
+  const descEl  = el.querySelector('.banner-desc');
+  const item1   = el.querySelector('.banner-item-1');
+  const item2   = el.querySelector('.banner-item-2');
+  const item3   = el.querySelector('.banner-item-3');
+  const btnEl   = el.querySelector('.banner-gotit');
+  if (titleEl) titleEl.textContent = t('whatsNewTitle');
+  if (descEl)  descEl.textContent  = t('whatsNewDesc');
+  if (item1)   item1.textContent   = t('whatsNew1');
+  if (item2)   item2.textContent   = t('whatsNew2');
+  if (item3)   item3.textContent   = t('whatsNew3');
+  if (btnEl)   btnEl.textContent   = t('gotIt');
+}
+
+// ── CATEGORY MANAGER ──────────────────────────────────────────────────────
+
+let pendingDeleteCat = null; // enName of cat pending deletion
+
+function openCatManager() {
+  renderCatManager();
+  document.getElementById('cat-modal').classList.add('open');
+}
+
+function closeCatManager() {
+  document.getElementById('cat-modal').classList.remove('open');
+}
+
+function renderCatManager() {
+  const body = document.getElementById('cat-manager-body');
+  const groupKeys = ['groupFoodDrinks','groupLiving','groupLifestyle','groupFinance'];
+  body.innerHTML = groupKeys.map(gKey => {
+    const cats = userCats.filter(c => c.gKey === gKey);
+    if (!cats.length) return '';
+    return `<div class="cm-group">
+      <div class="cm-group-label">${t(gKey)}</div>
+      <div class="cm-cat-list">
+        ${cats.map(cat => `
+          <div class="cm-cat-row">
+            <span class="cat-pill ${catENtoCSS(cat.enName)}">${catENtoDisplay(cat.enName)}</span>
+            <button class="del-btn" onclick="confirmDeleteCat('${cat.enName.replace(/'/g,"\'")}')">×</button>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Update add form labels
+  const groupSel = document.getElementById('cm-group-sel');
+  if (groupSel) {
+    const curVal = groupSel.value;
+    groupSel.innerHTML = groupKeys.map(gk =>
+      `<option value="${gk}">${t(gk)}</option>`).join('');
+    if (curVal) groupSel.value = curVal;
+  }
+
+  applyBannerLang();
+}
+
+function confirmDeleteCat(enName) {
+  pendingDeleteCat = enName;
+  const modal = document.getElementById('delete-cat-modal');
+  const preview = document.getElementById('delete-cat-preview');
+  if (preview) preview.textContent = catENtoDisplay(enName);
+  // Apply i18n
+  modal.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  modal.classList.add('open');
+}
+
+function closeDeleteCatModal() {
+  document.getElementById('delete-cat-modal').classList.remove('open');
+  pendingDeleteCat = null;
+}
+
+function doDeleteCat() {
+  if (!pendingDeleteCat) return;
+  userCats = userCats.filter(c => c.enName !== pendingDeleteCat);
+  saveUserCats();
+  closeDeleteCatModal();
+  buildCategorySelect();
+  renderCatManager();
+  showToast(`✓ Category removed`);
+}
+
+function addNewCategory() {
+  const nameInput = document.getElementById('cm-new-name');
+  const groupSel  = document.getElementById('cm-group-sel');
+  const name = nameInput?.value.trim();
+  const gKey = groupSel?.value;
+  if (!name || !gKey) return;
+  // Check for duplicate
+  if (userCats.some(c => c.enName.toLowerCase() === name.toLowerCase())) {
+    showToast('⚠ Category already exists');
+    return;
+  }
+  const newCat = { id: 'cat_' + Date.now(), gKey, enName: name };
+  userCats.push(newCat);
+  saveUserCats();
+  if (nameInput) nameInput.value = '';
+  buildCategorySelect();
+  renderCatManager();
+  showToast(`✓ "${name}" added`);
 }
 
 // ── IMPORT / EXPORT ────────────────────────────────────────────────────────
@@ -1173,6 +1404,10 @@ function openModal()  { document.getElementById('modal').classList.add('open'); 
 function closeModal() { document.getElementById('modal').classList.remove('open'); }
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
 document.getElementById('delete-modal').addEventListener('click',e=>{if(e.target===document.getElementById('delete-modal'))closeDeleteModal();});
+document.getElementById('cat-modal').addEventListener('click',e=>{if(e.target===document.getElementById('cat-modal'))closeCatManager();});
+document.getElementById('delete-cat-modal').addEventListener('click',e=>{if(e.target===document.getElementById('delete-cat-modal'))closeDeleteCatModal();});
+// Thousands separator on amount input
+document.getElementById('inp-amount').addEventListener('input', function(){ formatAmountInput(this); });
 
 function toCSVRow(f){return f.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',');}
 
@@ -1237,7 +1472,7 @@ document.getElementById('inp-amount').addEventListener('keydown',e=>{if(e.key===
 document.getElementById('auth-email').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('auth-password').focus();});
 document.getElementById('auth-password').addEventListener('keydown',e=>{if(e.key==='Enter')handleEmailAuth();});
 document.getElementById('auth-confirm').addEventListener('keydown',e=>{if(e.key==='Enter')handleEmailAuth();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDeleteModal();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDeleteModal();closeCatManager();closeDeleteCatModal();}});
 
 window.addEventListener('online', async()=>{showToast(t('toastBackOnline'));await loadFromSupabase();renderLedger();renderMetrics();});
 window.addEventListener('offline',()=>{setSyncStatus('error','offline');showToast(t('toastOffline'));});
@@ -1312,9 +1547,11 @@ async function _bootApp(user) {
     }
   }
 
+  loadUserCats();
   showScreen('app');
   applyLanguage();
   updateAmountField();
+  showWhatsNewBanner();
   refreshAllNavBars();
   backgroundSync();
 }
