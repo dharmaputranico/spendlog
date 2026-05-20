@@ -755,8 +755,9 @@ function onCatChange() {
 
 async function addExpense() {
   const name   = document.getElementById('inp-name').value.trim();
-  // Amount input may have thousands separators — strip them before parsing
-  const rawAmt = document.getElementById('inp-amount').value.replace(/[^0-9.]/g,'');
+  // Strip thousands separators (both . and ,) before parsing
+  // id-ID locale uses dots as thousands sep (70.000), en uses commas (70,000)
+  const rawAmt = document.getElementById('inp-amount').value.replace(/[.,]/g,'');
   const amount = parseFloat(rawAmt);
   const cat    = document.getElementById('inp-cat').value;
   if (!name||isNaN(amount)||amount<=0) { document.getElementById('inp-name').focus(); return; }
@@ -1264,14 +1265,14 @@ function buildCategorySelect() {
 // ── AMOUNT THOUSANDS SEPARATOR ────────────────────────────────────────────
 
 function formatAmountInput(el) {
-  // While typing: only strip non-numeric chars, do NOT reformat
-  // (reformatting mid-type moves cursor and drops digits)
-  const c = getCur();
+  // While typing: strip thousands separators (both . and ,) but keep digits
+  // Do NOT reformat — reformatting mid-type moves cursor and drops digits
   const pos = el.selectionStart;
-  const raw = el.value.replace(/[^0-9.]/g, '');
+  const raw = el.value.replace(/[.,]/g, '').replace(/[^0-9]/g, '');
   if (el.value !== raw) {
+    const diff = el.value.length - raw.length;
     el.value = raw;
-    el.setSelectionRange(pos, pos);
+    el.setSelectionRange(Math.max(0, pos - diff), Math.max(0, pos - diff));
   }
 }
 
@@ -1287,8 +1288,8 @@ function formatAmountBlur(el) {
 }
 
 function formatAmountFocus(el) {
-  // On focus: strip thousands separator so user can type freely
-  const raw = el.value.replace(/[^0-9.]/g, '');
+  // On focus: strip all thousands separators (. and ,) so user can type freely
+  const raw = el.value.replace(/[.,]/g, '').replace(/[^0-9]/g, '');
   el.value = raw;
 }
 
